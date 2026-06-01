@@ -761,15 +761,18 @@ function renderSale(){
         qtyH+="</div>";
         qtyH+="<span style='font-size:12px;color:var(--p);font-weight:700;'>= "+(isSvc?"서비스 (0원)":krw(si.price*line.qty))+"</span>";
         qtyH+="</div>";
-        // Sale price toggle
+        // Sale price button
         var _salePrice=line.salePrice||0;
         var _basePrice=si?si.price:0;
-        qtyH+="<div style='margin-top:6px;border-top:1px dashed var(--bd);padding-top:6px;'>";
-        qtyH+="<div style='display:flex;align-items:center;gap:6px;'>";
-        qtyH+="<span style='font-size:11px;color:var(--txs);font-weight:600;'>세일가</span>";
-        qtyH+="<input type='number' placeholder='기본가: "+(_basePrice>0?_basePrice:"")+"' value='"+(_salePrice>0?_salePrice:"")+"' onchange='setSalePrice("+i+",this.value,"+_basePrice+")' style='flex:1;background:var(--bg);border:1px solid var(--bd);border-radius:7px;padding:5px 8px;font-size:12px;color:var(--tx);outline:none;'/>";
-        qtyH+=_salePrice>0&&_salePrice<_basePrice?"<span style='font-size:11px;color:var(--er);font-weight:700;'>-"+Math.round((_basePrice-_salePrice)/_basePrice*100)+"%</span>":"";
-        qtyH+="</div></div>";
+        var _dPct=_salePrice>0&&_salePrice<_basePrice?Math.round((_basePrice-_salePrice)/_basePrice*100):0;
+        qtyH+="<div style='margin-top:6px;display:flex;align-items:center;gap:6px;'>";
+        if(_salePrice>0&&_salePrice<_basePrice){
+          qtyH+="<span style='font-size:11px;color:var(--er);font-weight:700;background:var(--erb);padding:3px 8px;border-radius:6px;'>-"+_dPct+"% "+krw(_salePrice)+"</span>";
+          qtyH+="<button type='button' onclick='clearSalePrice("+i+")' style='font-size:10px;color:var(--txs);background:none;border:1px solid var(--bd);border-radius:6px;padding:3px 7px;cursor:pointer;'>✕ 취소</button>";
+        } else {
+          qtyH+="<button type='button' onclick='openSalePriceModal("+i+","+_basePrice+")' style='font-size:11px;font-weight:700;color:var(--p);background:var(--ps);border:1.5px solid var(--pm);border-radius:6px;padding:4px 12px;cursor:pointer;'>할인</button>";
+        }
+        qtyH+="</div>";
       }
       h+="<div class='lbox'><div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;'>";
       h+="<span style='font-size:11px;color:var(--p);font-weight:800;'>상품 "+(i+1)+"</span>"+rmBtn+"</div>";
@@ -812,6 +815,74 @@ function fmtResv(el){
 }
 function toggleSvc(i){ S.sLines[i].svc=!S.sLines[i].svc; renderSale(); }
 function setSaleQtyDirect(i,v,max){ var n=Math.min(max,Math.max(1,Number(v)||1)); S.sLines[i].qty=n; renderSale(); }
+function openSalePriceModal(lineIdx, basePrice){
+  var cur=S.sLines[lineIdx].salePrice||0;
+  var h="<div style='display:flex;flex-direction:column;gap:14px;'>";
+  h+="<div style='background:var(--bg);border-radius:10px;padding:12px;font-size:13px;'>";
+  h+="<div style='color:var(--txs);font-size:11px;margin-bottom:3px;'>기본 판매가</div>";
+  h+="<div style='font-weight:800;font-size:16px;'>"+krw(basePrice)+"</div></div>";
+  h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>할인 방법</label>";
+  h+="<div style='display:flex;gap:8px;margin-bottom:10px;'>";
+  h+="<button type='button' onclick='switchDiscMode(0)' id='dm0' style='flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--p);background:var(--ps);color:var(--p);cursor:pointer;font-size:12px;font-weight:700;'>금액 직접 입력</button>";
+  h+="<button type='button' onclick='switchDiscMode(1)' id='dm1' style='flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--bd);background:#fff;color:var(--txs);cursor:pointer;font-size:12px;font-weight:700;'>% 할인</button>";
+  h+="</div>";
+  h+="<div id='disc-mode-0'>";
+  h+="<label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>할인 후 판매가 (원)</label>";
+  h+="<input class='inp' type='number' id='sp-price' placeholder='할인된 가격 입력' value='"+(cur>0?cur:"")+"' oninput='updateSalePricePreview("+basePrice+")'/></div>";
+  h+="<div id='disc-mode-1' style='display:none;'>";
+  h+="<label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>할인율 (%)</label>";
+  h+="<input class='inp' type='number' id='sp-pct' placeholder='예: 10' min='1' max='99' oninput='updateSalePctPreview("+basePrice+")'/></div></div>";
+  h+="<div id='sp-preview' style='display:none;background:var(--erb);border-radius:10px;padding:12px;font-size:13px;'></div>";
+  h+="<input type='hidden' id='sp-lidx' value='"+lineIdx+"'/>";
+  h+="<input type='hidden' id='sp-base' value='"+basePrice+"'/>";
+  h+="<button type='button' class='btn bp' style='width:100%;padding:12px;font-size:14px;' onclick='applySalePrice()'>할인 적용</button>";
+  h+="</div>";
+  showModal("할인 설정", h);
+}
+function switchDiscMode(m){
+  document.getElementById("disc-mode-0").style.display=m===0?"block":"none";
+  document.getElementById("disc-mode-1").style.display=m===1?"block":"none";
+  document.getElementById("dm0").style.background=m===0?"var(--ps)":"#fff";
+  document.getElementById("dm0").style.color=m===0?"var(--p)":"var(--txs)";
+  document.getElementById("dm0").style.borderColor=m===0?"var(--p)":"var(--bd)";
+  document.getElementById("dm1").style.background=m===1?"var(--ps)":"#fff";
+  document.getElementById("dm1").style.color=m===1?"var(--p)":"var(--txs)";
+  document.getElementById("dm1").style.borderColor=m===1?"var(--p)":"var(--bd)";
+  document.getElementById("sp-preview").style.display="none";
+}
+function updateSalePricePreview(base){
+  var p=Number((document.getElementById("sp-price")||{}).value||0);
+  var el=document.getElementById("sp-preview");
+  if(!el)return;
+  if(p>0&&p<base){
+    var pct=Math.round((base-p)/base*100);
+    el.style.display="block";
+    el.innerHTML="<span style='color:var(--er);font-weight:700;'>-"+pct+"% 할인</span> &nbsp;"+krw(base)+" → <strong>"+krw(p)+"</strong>";
+  } else el.style.display="none";
+}
+function updateSalePctPreview(base){
+  var pct=Number((document.getElementById("sp-pct")||{}).value||0);
+  var el=document.getElementById("sp-preview");
+  if(!el)return;
+  if(pct>0&&pct<100){
+    var newP=Math.round(base*(1-pct/100));
+    document.getElementById("sp-price").value=newP;
+    el.style.display="block";
+    el.innerHTML="<span style='color:var(--er);font-weight:700;'>-"+pct+"% 할인</span> &nbsp;"+krw(base)+" → <strong>"+krw(newP)+"</strong>";
+  } else el.style.display="none";
+}
+function applySalePrice(){
+  var idx=Number(document.getElementById("sp-lidx").value);
+  var base=Number(document.getElementById("sp-base").value);
+  var p=Number((document.getElementById("sp-price")||{}).value||0);
+  if(!p||p<=0||p>=base){alert("기본가보다 낮은 금액을 입력하세요.");return;}
+  S.sLines[idx].salePrice=p;
+  closeModal();renderSale();
+}
+function clearSalePrice(i){
+  S.sLines[i].salePrice=0;
+  renderSale();
+}
 function setSalePrice(i,v,basePrice){
   var n=Number(v)||0;
   S.sLines[i].salePrice=n>0&&n<basePrice?n:0;
