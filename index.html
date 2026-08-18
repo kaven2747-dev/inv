@@ -447,26 +447,30 @@ function renderInv(){
         var stClass=sold?"br":"bn";
 
         h+="<div class='ir' style='"+rowBorder+rowBg+"'>";
-        // Name row
+        // Name row (thumb + name/stats column)
         var thumb=(item.images&&item.images[0])?item.images[0]:"";
-        h+="<div style='display:flex;align-items:center;gap:10px;margin-bottom:7px;'>";
+        h+="<div style='display:flex;align-items:flex-start;gap:10px;margin-bottom:7px;'>";
         h+="<div style='width:64px;height:64px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
         h+= thumb ? "<img src='"+thumb+"' style='width:100%;height:100%;object-fit:cover;'/>" : "<span style='font-size:22px;color:var(--txl);'>🖼</span>";
         h+="</div>";
-        h+="<div style='flex:1;min-width:0;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
+        h+="<div style='flex:1;min-width:0;'>";
+        h+="<div style='display:flex;align-items:center;justify-content:space-between;gap:6px;'>";
+        h+="<div style='min-width:0;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
         h+="<span style='font-weight:700;font-size:13px;color:"+nc+";text-decoration:"+nd+";'>"+item.name+"</span>";
         if(sold) h+="<span style='margin-left:5px;background:var(--er);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px;vertical-align:middle;'>품절</span>";
         h+="<span style='font-size:10px;color:var(--txl);margin-left:3px;'>✎</span>";
         h+="</div>";
         h+="<button style='background:none;border:none;color:var(--txl);cursor:pointer;padding:2px;flex-shrink:0;' onclick='delItem(\""+acc+"\","+item.id+")'>"+ICO.trash+"</button>";
         h+="</div>";
-        // Stats row (compact: price / stock / expand toggle)
-        h+="<div class='mg' style='grid-template-columns:2fr 1fr auto;'>";
+        // Stats row (compact: price / stock / expand toggle) — now under the product name
+        h+="<div class='mg' style='grid-template-columns:2fr 1fr auto;margin-top:7px;'>";
         var _origP=item.origPrice||0;
         var _dPct=_origP>0&&_origP>item.price?Math.round((_origP-item.price)/_origP*100):0;
         h+="<div class='bx bn' style='cursor:pointer;' onclick='togBunge("+item.id+")'><div class='bl' id='pl"+item.id+"'>판매가</div><div class='bv' id='pd"+item.id+"'>"+(_dPct>0?"<span style='font-size:7px;color:var(--txl);text-decoration:line-through;'>"+krw(_origP)+"</span> <span style='color:var(--er);font-weight:900;'>-"+_dPct+"%</span><br>"+krw(item.price):krw(item.price))+"</div></div>";
         h+="<div class='bx "+stClass+"'><div class='bl'>재고</div><div class='bv' style='color:"+sc2+";'>"+item.stock+"개</div></div>";
         h+="<button onclick='togExp(\""+acc+"\","+item.id+")' style='background:"+expBg+";border:1.5px solid var(--pm);border-radius:8px;cursor:pointer;padding:0 7px;display:flex;align-items:center;justify-content:center;min-width:28px;'>"+expIco+"</button>";
+        h+="</div>";
+        h+="</div>"; // end name+stats column
         h+="</div>";
         // Expanded
         if(isExp){
