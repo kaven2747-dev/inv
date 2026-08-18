@@ -416,13 +416,13 @@ function renderInv(){
     h+="<div style='display:flex;flex-direction:column;align-items:flex-start;gap:3px;'>";
     var catImg=S.catImages[acc+"_"+cat]||"";
     h+="<div style='display:flex;align-items:center;gap:8px;'>";
-    if(catImg) h+="<img src='"+catImg+"' style='width:24px;height:24px;object-fit:contain;background:#fff;border-radius:6px;padding:2px;flex-shrink:0;'/>";
     h+="<span style='font-size:15px;font-weight:900;'>"+cat+"</span>";
     h+="<span style='font-size:11px;background:rgba(255,255,255,0.22);padding:2px 8px;border-radius:20px;font-weight:700;'>"+ci.length+"종</span>";
     h+="</div>";
     h+="<span style='font-size:11px;opacity:0.85;'>재고 "+stk+"개 &middot; "+krw(amt)+"</span>";
     h+="</div>";
-    h+="<div style='display:flex;align-items:center;gap:6px;'>";
+    h+="<div style='display:flex;align-items:center;gap:8px;'>";
+    if(catImg) h+="<img src='"+catImg+"' style='width:42px;height:42px;object-fit:contain;background:#fff;border-radius:10px;padding:4px;flex-shrink:0;'/>";
     // Edit button — uses data attributes, onclick stops propagation
     h+="<button type='button' data-acc='"+acc+"' data-cat='"+cat+"' onclick='event.stopPropagation();editCat(this)' style='background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);border-radius:8px;color:#fff;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:700;'>수정</button>";
     h+=chev;
@@ -449,9 +449,9 @@ function renderInv(){
         h+="<div class='ir' style='"+rowBorder+rowBg+"'>";
         // Name row
         var thumb=(item.images&&item.images[0])?item.images[0]:"";
-        h+="<div style='display:flex;align-items:center;gap:8px;margin-bottom:7px;'>";
-        h+="<div style='width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
-        h+= thumb ? "<img src='"+thumb+"' style='width:100%;height:100%;object-fit:cover;'/>" : "<span style='font-size:15px;color:var(--txl);'>🖼</span>";
+        h+="<div style='display:flex;align-items:center;gap:10px;margin-bottom:7px;'>";
+        h+="<div style='width:64px;height:64px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
+        h+= thumb ? "<img src='"+thumb+"' style='width:100%;height:100%;object-fit:cover;'/>" : "<span style='font-size:22px;color:var(--txl);'>🖼</span>";
         h+="</div>";
         h+="<div style='flex:1;min-width:0;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
         h+="<span style='font-weight:700;font-size:13px;color:"+nc+";text-decoration:"+nd+";'>"+item.name+"</span>";
@@ -460,43 +460,53 @@ function renderInv(){
         h+="</div>";
         h+="<button style='background:none;border:none;color:var(--txl);cursor:pointer;padding:2px;flex-shrink:0;' onclick='delItem(\""+acc+"\","+item.id+")'>"+ICO.trash+"</button>";
         h+="</div>";
-        // Stats row
-        h+="<div class='mg'>";
+        // Stats row (compact: price / stock / expand toggle)
+        h+="<div class='mg' style='grid-template-columns:2fr 1fr auto;'>";
         var _origP=item.origPrice||0;
         var _dPct=_origP>0&&_origP>item.price?Math.round((_origP-item.price)/_origP*100):0;
         h+="<div class='bx bn' style='cursor:pointer;' onclick='togBunge("+item.id+")'><div class='bl' id='pl"+item.id+"'>판매가</div><div class='bv' id='pd"+item.id+"'>"+(_dPct>0?"<span style='font-size:7px;color:var(--txl);text-decoration:line-through;'>"+krw(_origP)+"</span> <span style='color:var(--er);font-weight:900;'>-"+_dPct+"%</span><br>"+krw(item.price):krw(item.price))+"</div></div>";
         h+="<div class='bx "+stClass+"'><div class='bl'>재고</div><div class='bv' style='color:"+sc2+";'>"+item.stock+"개</div></div>";
-        h+="<div class='bx bn'><div class='bl'>누적판매</div><div class='bv'>"+item.soldCount+"개</div></div>";
-        h+="<div class='bx ba'><div class='bl'>누적매출</div><div class='bv'>"+krw(item.soldValue)+"</div></div>";
         h+="<button onclick='togExp(\""+acc+"\","+item.id+")' style='background:"+expBg+";border:1.5px solid var(--pm);border-radius:8px;cursor:pointer;padding:0 7px;display:flex;align-items:center;justify-content:center;min-width:28px;'>"+expIco+"</button>";
-        h+="</div>";
-        // 판매시작 / 취소 quick action
-        var reserving=item.reserving||0;
-        h+="<div style='display:flex;gap:6px;margin-top:6px;align-items:stretch;'>";
-        if(reserving>0){
-          h+="<span style='font-size:11px;font-weight:700;color:var(--wn);background:var(--wnb);border:1px solid #E5CC70;padding:0 9px;border-radius:8px;display:flex;align-items:center;white-space:nowrap;'>예약중 "+reserving+"개</span>";
-          h+="<button class='btn' style='flex:1;padding:7px 0;font-size:12px;background:#fff;color:var(--er);border:1.5px solid var(--erd);' onclick='cancelSale(\""+acc+"\","+item.id+")'>취소</button>";
-        }
-        var canStart=item.stock>0;
-        h+="<button class='btn bs' style='flex:1;padding:7px 0;font-size:12px;"+(canStart?"":"opacity:0.4;")+"'"+(canStart?"":" disabled")+" onclick='startSale(\""+acc+"\","+item.id+")'>▶ 판매시작</button>";
         h+="</div>";
         // Expanded
         if(isExp){
           var dc2=sold?"#D93025":"#FF6E41";
           h+="<div style='margin-top:6px;padding-top:6px;border-top:1px dashed var(--bd);'>";
+          var restImgs=(item.images||[]).slice(1,4);
+          if(restImgs.length){
+            h+="<div style='display:grid;grid-template-columns:repeat("+restImgs.length+",1fr);gap:6px;margin-bottom:8px;'>";
+            restImgs.forEach(function(im){
+              h+="<img src='"+im+"' style='width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;border:1px solid var(--bd);'/>";
+            });
+            h+="</div>";
+          }
           if(item.desc){
             h+="<div style='background:#fff;border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px;line-height:1.5;color:var(--tx);white-space:pre-wrap;'>"+escHtml(item.desc)+"</div>";
             h+="<button type='button' onclick='copyDescFor(\""+acc+"\","+item.id+")' style='margin-bottom:8px;background:var(--ps);border:1px solid var(--pm);border-radius:7px;color:var(--p);padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;'>📋 설명 복사</button>";
           }
+          h+="<div style='display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;'>";
+          h+="<div class='bx bn'><div class='bl'>누적판매</div><div class='bv'>"+item.soldCount+"개</div></div>";
+          h+="<div class='bx ba'><div class='bl'>누적매출</div><div class='bv'>"+krw(item.soldValue)+"</div></div>";
+          h+="</div>";
           h+="<div style='display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;'>";
           h+="<div class='bx bn'><div class='bl'>총물품가</div><div class='bv'>"+krw(item.price*item.stock)+"</div></div>";
           h+="<div class='bx bn'><div class='bl'>번개장터가</div><div class='bv' style='color:var(--p);'>"+krw(bunge(item.price))+"</div></div>";
           h+="</div>";
-          h+="<div class='sc'>";
+          h+="<div class='sc' style='margin-bottom:8px;'>";
           h+="<button class='btn bg sm' onclick='updStock(\""+acc+"\","+item.id+",-1)'"+(item.stock===0?" disabled":"")+">−</button>";
           h+="<div class='sd' style='color:"+dc2+";'>"+item.stock+"개</div>";
           h+="<button class='btn bp sp' onclick='updStock(\""+acc+"\","+item.id+",1)'>+</button>";
-          h+="</div></div>";
+          h+="</div>";
+          var reserving=item.reserving||0;
+          h+="<div style='display:flex;gap:6px;align-items:stretch;'>";
+          if(reserving>0){
+            h+="<span style='font-size:11px;font-weight:700;color:var(--wn);background:var(--wnb);border:1px solid #E5CC70;padding:0 9px;border-radius:8px;display:flex;align-items:center;white-space:nowrap;'>예약중 "+reserving+"개</span>";
+            h+="<button class='btn' style='flex:1;padding:7px 0;font-size:12px;background:#fff;color:var(--er);border:1.5px solid var(--erd);' onclick='cancelSale(\""+acc+"\","+item.id+")'>취소</button>";
+          }
+          var canStart=item.stock>0;
+          h+="<button class='btn bs' style='flex:1;padding:7px 0;font-size:12px;"+(canStart?"":"opacity:0.4;")+"'"+(canStart?"":" disabled")+" onclick='startSale(\""+acc+"\","+item.id+")'>▶ 판매시작</button>";
+          h+="</div>";
+          h+="</div>";
         }
         h+="</div>"; // end ir
       });
