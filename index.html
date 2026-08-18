@@ -156,7 +156,7 @@ var S={
   orders:[],acc:"Shibuki",
   catOrder:{}, // acc -> [cat, cat, ...]
   shipTab:"pend", // pending | done
-  col:{},exp:{},catColors:{},daily:{},totals:{},
+  col:{},exp:{},catColors:{},catImages:{},daily:{},totals:{},
   sAcc:"",sLines:[{cat:"",iid:"",qty:1}],sShip:null
 };
 
@@ -169,13 +169,17 @@ function loadS(){
     ACCS.forEach(function(a){ S.items[a]=Array.isArray(d.items&&d.items[a])?d.items[a]:[]; });
     S.orders=Array.isArray(d.orders)?d.orders:[];
     if(d.catColors&&typeof d.catColors==="object") S.catColors=d.catColors;
+    if(d.catImages&&typeof d.catImages==="object") S.catImages=d.catImages;
     if(d.daily&&typeof d.daily==="object") S.daily=d.daily;
     if(d.totals&&typeof d.totals==="object") S.totals=d.totals;
     if(d.catOrder&&typeof d.catOrder==="object") S.catOrder=d.catOrder;
   }catch(e){}
 }
 function saveS(){
-  try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,daily:S.daily,totals:S.totals,catOrder:S.catOrder})); }catch(e){}
+  try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder})); }catch(e){}
+}
+function escHtml(s){
+  return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 loadS();
 
@@ -236,12 +240,41 @@ function editCat(btn){
   }
   h+="</div>";
   h+="<button type='button' class='btn bg' style='width:100%;padding:8px;' onclick='pickCC(null)'>기본 색상 초기화</button></div>";
+  h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>배너 이미지 (선택, 로고 등)</label>";
+  h+="<div id='ce-img-box' style='display:flex;align-items:center;gap:10px;'></div>";
+  h+="<input type='file' accept='image/*' id='ce-img-file' style='display:none;' onchange='onCatImgChange(this)'/>";
+  h+="</div>";
   h+="<input type='hidden' id='ce-color' value='"+cur+"'/>";
+  h+="<input type='hidden' id='ce-img' value='"+(S.catImages[acc+"_"+cat]||"")+"'/>";
   h+="<input type='hidden' id='ce-acc' value='"+acc+"'/>";
   h+="<input type='hidden' id='ce-cat' value='"+cat+"'/>";
   h+="<button type='button' class='btn bp' style='width:100%;padding:12px;font-size:14px;' onclick='submitCatEdit()'>수정 완료</button>";
   h+="</div>";
   showModal("분류 수정",h);
+  renderCeImgBox();
+}
+function renderCeImgBox(){
+  var box=document.getElementById("ce-img-box"); if(!box) return;
+  var val=(document.getElementById("ce-img")||{}).value||"";
+  var h="";
+  if(val){
+    h+="<img src='"+val+"' style='width:48px;height:48px;object-fit:contain;background:#fff;border:1.5px solid var(--bd);border-radius:8px;padding:4px;'/>";
+    h+="<button type='button' class='btn bg' style='padding:6px 10px;font-size:11px;' onclick=\"document.getElementById('ce-img-file').click()\">변경</button>";
+    h+="<button type='button' class='btn' style='padding:6px 10px;font-size:11px;background:var(--erb);color:var(--er);border:1.5px solid var(--erd);' onclick='removeCeImg()'>제거</button>";
+  }else{
+    h+="<button type='button' class='btn bg' style='padding:8px 14px;font-size:12px;' onclick=\"document.getElementById('ce-img-file').click()\">이미지 선택</button>";
+  }
+  box.innerHTML=h;
+}
+function onCatImgChange(input){
+  var f=input.files&&input.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(e){ var el=document.getElementById("ce-img"); if(el) el.value=e.target.result; renderCeImgBox(); };
+  r.readAsDataURL(f);
+}
+function removeCeImg(){
+  var el=document.getElementById("ce-img"); if(el) el.value="";
+  renderCeImgBox();
 }
 function pickCC(btn){
   var v=btn?btn.getAttribute("data-cv"):"";
@@ -257,6 +290,7 @@ function submitCatEdit(){
   var oldCat=document.getElementById("ce-cat").value;
   var newName=document.getElementById("ce-n").value.trim();
   var newColor=document.getElementById("ce-color").value||"";
+  var newImg=(document.getElementById("ce-img")||{}).value||"";
   if(!newName){alert("분류 이름을 입력하세요.");return;}
   if(newName!==oldCat){
     S.items[acc]=(S.items[acc]||[]).map(function(i){
@@ -265,6 +299,8 @@ function submitCatEdit(){
   }
   delete S.catColors[acc+"_"+oldCat];
   if(newColor) S.catColors[acc+"_"+newName]=newColor;
+  delete S.catImages[acc+"_"+oldCat];
+  if(newImg) S.catImages[acc+"_"+newName]=newImg;
   saveS();closeModal();renderInv();
 }
 
@@ -378,7 +414,9 @@ function renderInv(){
     h+="<div style='margin-bottom:10px;'>";
     h+="<div style='display:flex;align-items:center;justify-content:space-between;border:none;cursor:pointer;color:#fff;padding:10px 14px;border-radius:"+rad+";background:"+bg+";' onclick='togCat(\""+ck+"\")'>";
     h+="<div style='display:flex;flex-direction:column;align-items:flex-start;gap:3px;'>";
+    var catImg=S.catImages[acc+"_"+cat]||"";
     h+="<div style='display:flex;align-items:center;gap:8px;'>";
+    if(catImg) h+="<img src='"+catImg+"' style='width:24px;height:24px;object-fit:contain;background:#fff;border-radius:6px;padding:2px;flex-shrink:0;'/>";
     h+="<span style='font-size:15px;font-weight:900;'>"+cat+"</span>";
     h+="<span style='font-size:11px;background:rgba(255,255,255,0.22);padding:2px 8px;border-radius:20px;font-weight:700;'>"+ci.length+"종</span>";
     h+="</div>";
@@ -410,9 +448,14 @@ function renderInv(){
 
         h+="<div class='ir' style='"+rowBorder+rowBg+"'>";
         // Name row
-        h+="<div style='display:flex;align-items:center;gap:6px;margin-bottom:7px;'>";
-        h+="<div style='flex:1;min-width:0;cursor:pointer;padding-left:11px;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
-        h+="<span style='font-weight:700;font-size:13px;color:"+nc+";text-decoration:"+nd+";'>"+(sold?"⚠ ":"")+item.name+"</span>";
+        var thumb=(item.images&&item.images[0])?item.images[0]:"";
+        h+="<div style='display:flex;align-items:center;gap:8px;margin-bottom:7px;'>";
+        h+="<div style='width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
+        h+= thumb ? "<img src='"+thumb+"' style='width:100%;height:100%;object-fit:cover;'/>" : "<span style='font-size:15px;color:var(--txl);'>🖼</span>";
+        h+="</div>";
+        h+="<div style='flex:1;min-width:0;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
+        h+="<span style='font-weight:700;font-size:13px;color:"+nc+";text-decoration:"+nd+";'>"+item.name+"</span>";
+        if(sold) h+="<span style='margin-left:5px;background:var(--er);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px;vertical-align:middle;'>품절</span>";
         h+="<span style='font-size:10px;color:var(--txl);margin-left:3px;'>✎</span>";
         h+="</div>";
         h+="<button style='background:none;border:none;color:var(--txl);cursor:pointer;padding:2px;flex-shrink:0;' onclick='delItem(\""+acc+"\","+item.id+")'>"+ICO.trash+"</button>";
@@ -427,10 +470,24 @@ function renderInv(){
         h+="<div class='bx ba'><div class='bl'>누적매출</div><div class='bv'>"+krw(item.soldValue)+"</div></div>";
         h+="<button onclick='togExp(\""+acc+"\","+item.id+")' style='background:"+expBg+";border:1.5px solid var(--pm);border-radius:8px;cursor:pointer;padding:0 7px;display:flex;align-items:center;justify-content:center;min-width:28px;'>"+expIco+"</button>";
         h+="</div>";
+        // 판매시작 / 취소 quick action
+        var reserving=item.reserving||0;
+        h+="<div style='display:flex;gap:6px;margin-top:6px;align-items:stretch;'>";
+        if(reserving>0){
+          h+="<span style='font-size:11px;font-weight:700;color:var(--wn);background:var(--wnb);border:1px solid #E5CC70;padding:0 9px;border-radius:8px;display:flex;align-items:center;white-space:nowrap;'>예약중 "+reserving+"개</span>";
+          h+="<button class='btn' style='flex:1;padding:7px 0;font-size:12px;background:#fff;color:var(--er);border:1.5px solid var(--erd);' onclick='cancelSale(\""+acc+"\","+item.id+")'>취소</button>";
+        }
+        var canStart=item.stock>0;
+        h+="<button class='btn bs' style='flex:1;padding:7px 0;font-size:12px;"+(canStart?"":"opacity:0.4;")+"'"+(canStart?"":" disabled")+" onclick='startSale(\""+acc+"\","+item.id+")'>▶ 판매시작</button>";
+        h+="</div>";
         // Expanded
         if(isExp){
           var dc2=sold?"#D93025":"#FF6E41";
           h+="<div style='margin-top:6px;padding-top:6px;border-top:1px dashed var(--bd);'>";
+          if(item.desc){
+            h+="<div style='background:#fff;border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px;line-height:1.5;color:var(--tx);white-space:pre-wrap;'>"+escHtml(item.desc)+"</div>";
+            h+="<button type='button' onclick='copyDescFor(\""+acc+"\","+item.id+")' style='margin-bottom:8px;background:var(--ps);border:1px solid var(--pm);border-radius:7px;color:var(--p);padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;'>📋 설명 복사</button>";
+          }
           h+="<div style='display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;'>";
           h+="<div class='bx bn'><div class='bl'>총물품가</div><div class='bv'>"+krw(item.price*item.stock)+"</div></div>";
           h+="<div class='bx bn'><div class='bl'>번개장터가</div><div class='bv' style='color:var(--p);'>"+krw(bunge(item.price))+"</div></div>";
@@ -463,6 +520,29 @@ function updStock(acc,id,d){
   S.items[acc]=S.items[acc].map(function(i){return i.id===id?Object.assign({},i,{stock:Math.max(0,i.stock+d)}):i;});
   saveS();renderInv();
 }
+function startSale(acc,id){
+  S.items[acc]=S.items[acc].map(function(i){
+    if(i.id!==id||i.stock<=0) return i;
+    return Object.assign({},i,{stock:i.stock-1,reserving:(i.reserving||0)+1});
+  });
+  saveS();renderInv();
+}
+function cancelSale(acc,id){
+  S.items[acc]=S.items[acc].map(function(i){
+    if(i.id!==id||!(i.reserving>0)) return i;
+    return Object.assign({},i,{stock:i.stock+1,reserving:i.reserving-1});
+  });
+  saveS();renderInv();
+}
+function copyDescFor(acc,id){
+  var item=(S.items[acc]||[]).find(function(i){return i.id===id;});
+  if(!item||!item.desc) return;
+  navigator.clipboard.writeText(item.desc).then(function(){
+    alert("설명을 복사했어요. 당근/번개 게시글에 붙여넣기 하세요.");
+  }).catch(function(){
+    alert("복사에 실패했어요. 직접 선택해서 복사해주세요.");
+  });
+}
 var _bs={};
 function togBunge(id){
   _bs[id]=!_bs[id];
@@ -474,8 +554,38 @@ function togBunge(id){
 }
 
 // ── Add Item ──────────────────────────────────────
+var _addImages=[];
+function renderImgGrid(boxId, arr){
+  var box=document.getElementById(boxId); if(!box) return;
+  var h="";
+  for(var i=0;i<4;i++){
+    var img=arr[i];
+    if(img){
+      h+="<div style='position:relative;'>";
+      h+="<img src='"+img+"' style='width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;border:1.5px solid var(--bd);display:block;'/>";
+      if(i===0) h+="<span style='position:absolute;top:2px;left:2px;background:var(--p);color:#fff;font-size:8px;font-weight:800;padding:1px 5px;border-radius:6px;'>대표</span>";
+      h+="<button type='button' onclick='"+(boxId==="ai-images"?"removeAddImg":"removeEditImg")+"("+i+")' style='position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;'>✕</button>";
+      h+="</div>";
+    }else{
+      h+="<label style='aspect-ratio:1/1;border:1.5px dashed var(--bd);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--txl);font-size:22px;cursor:pointer;background:var(--bg);'>+";
+      h+="<input type='file' accept='image/*' style='display:none;' onchange='"+(boxId==="ai-images"?"onAddImgChange":"onEditImgChange")+"("+i+",this)'/>";
+      h+="</label>";
+    }
+  }
+  box.innerHTML=h;
+}
+function renderAddImages(){ renderImgGrid("ai-images", _addImages); }
+function onAddImgChange(i,input){
+  var f=input.files&&input.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(e){ _addImages[i]=e.target.result; renderAddImages(); };
+  r.readAsDataURL(f);
+}
+function removeAddImg(i){ _addImages.splice(i,1); renderAddImages(); }
+
 function openAdd(){
   var acc=S.acc;
+  _addImages=[];
   var cats=[];
   (S.items[acc]||[]).forEach(function(i){if(cats.indexOf(i.category)<0)cats.push(i.category);});
   var h="<div style='display:flex;flex-direction:column;gap:12px;'>";
@@ -493,9 +603,14 @@ function openAdd(){
   h+="<input class='inp' type='number' id='ai-price' placeholder='10000' oninput='updBunge()'/>";
   h+="<div id='ai-bunge' style='display:none;margin-top:6px;background:var(--ps);border:1px solid var(--pm);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--p);font-weight:700;'></div></div>";
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>초기 재고</label><input class='inp' type='number' id='ai-stock' value='1'/></div>";
+  h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상품 사진 (최대 4장, 첫 장이 대표사진)</label>";
+  h+="<div id='ai-images' style='display:grid;grid-template-columns:repeat(4,1fr);gap:6px;'></div></div>";
+  h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상세 설명</label>";
+  h+="<textarea class='inp' id='ai-desc' rows='5' style='resize:vertical;min-height:100px;line-height:1.5;' placeholder='상품 상태, 구성품, 유의사항 등 자유롭게 적어주세요. 당근/번개 게시글에 그대로 복사해서 쓸 수 있어요.'></textarea></div>";
   h+="<button type='button' class='btn bp' style='width:100%;padding:12px;font-size:14px;' onclick='submitAdd(\""+acc+"\")'>등록하기</button>";
   h+="</div>";
   showModal("상품 등록 — "+acc,h);
+  renderAddImages();
 }
 function pickCat(btn,c){
   document.querySelectorAll("#catbtns button").forEach(function(b){var on=b===btn;b.style.background=on?"#FF6E41":"#fff";b.style.color=on?"#fff":"#8C6355";b.style.borderColor=on?"#FF6E41":"#FFD6C5";});
@@ -512,15 +627,27 @@ function submitAdd(acc){
   var name=((document.getElementById("ai-name")||{}).value||"").trim();
   var price=Number((document.getElementById("ai-price")||{}).value||0);
   var stock=Number((document.getElementById("ai-stock")||{}).value||0);
+  var desc=((document.getElementById("ai-desc")||{}).value||"").trim();
   if(!cat||!name||!price){alert("분류, 상품명, 판매가를 입력하세요.");return;}
-  S.items[acc].push({id:Date.now(),category:cat,name:name,price:price,stock:stock,soldCount:0,soldValue:0});
+  S.items[acc].push({id:Date.now(),category:cat,name:name,price:price,stock:stock,soldCount:0,soldValue:0,images:_addImages.slice(0,4),desc:desc,reserving:0});
   saveS();closeModal();renderInv();
 }
 
 // ── Edit Item ─────────────────────────────────────
+var _editImages=[];
+function renderEditImages(){ renderImgGrid("ei-images", _editImages); }
+function onEditImgChange(i,input){
+  var f=input.files&&input.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(e){ _editImages[i]=e.target.result; renderEditImages(); };
+  r.readAsDataURL(f);
+}
+function removeEditImg(i){ _editImages.splice(i,1); renderEditImages(); }
+
 function openEdit(acc,id){
   var item=(S.items[acc]||[]).find(function(i){return i.id===id;});
   if(!item)return;
+  _editImages=(item.images||[]).slice();
   var h="<div style='display:flex;flex-direction:column;gap:12px;'>";
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상품명</label><input class='inp' id='en' value='"+item.name+"'/></div>";
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>판매가 (원)</label>";
@@ -538,10 +665,15 @@ function openEdit(acc,id){
   h+="</div>";
   h+="<div id='disc-preview' style='display:none;margin-top:8px;background:var(--okb);border:1px solid #8EDCBA;border-radius:7px;padding:7px 10px;font-size:12px;color:var(--ok);font-weight:700;'></div>";
   h+="</div>";
+  h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상품 사진 (최대 4장, 첫 장이 대표사진)</label>";
+  h+="<div id='ei-images' style='display:grid;grid-template-columns:repeat(4,1fr);gap:6px;'></div></div>";
+  h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상세 설명</label>";
+  h+="<textarea class='inp' id='e-desc' rows='5' style='resize:vertical;min-height:100px;line-height:1.5;' placeholder='상품 상태, 구성품, 유의사항 등 자유롭게 적어주세요. 당근/번개 게시글에 그대로 복사해서 쓸 수 있어요.'>"+escHtml(item.desc||"")+"</textarea></div>";
   h+="<input type='hidden' id='ea' value='"+acc+"'/><input type='hidden' id='ei' value='"+id+"'/><input type='hidden' id='orig-price' value='"+item.price+"'/>";
   h+="<button type='button' class='btn bp' style='width:100%;padding:12px;font-size:14px;' onclick='submitEdit()'>수정 완료</button>";
   h+="</div>";
   showModal("상품 수정",h);
+  renderEditImages();
 }
 function updDiscAmt(el){
   var origPrice=Number((document.getElementById("orig-price")||{}).value||0);
@@ -615,10 +747,11 @@ function submitEdit(){
   var name=((document.getElementById("en")||{}).value||"").trim();
   var price=Number((document.getElementById("ep")||{}).value||0);
   var origPrice=Number((document.getElementById("orig-price")||{}).value||0);
+  var desc=((document.getElementById("e-desc")||{}).value||"").trim();
   if(!name||!price){alert("상품명과 판매가를 입력하세요.");return;}
   S.items[acc]=S.items[acc].map(function(i){
     if(i.id!==id) return i;
-    var newItem=Object.assign({},i,{name:name,price:price});
+    var newItem=Object.assign({},i,{name:name,price:price,desc:desc,images:_editImages.slice(0,4)});
     // Save origPrice only if discount was applied
     if(origPrice>0&&price<origPrice) newItem.origPrice=origPrice;
     else if(price===origPrice||!origPrice) delete newItem.origPrice;
@@ -708,7 +841,7 @@ function submitBulk(){
   var valid=_bl.filter(function(l){return l.name.trim()&&Number(l.price)>0;});
   if(!valid.length){alert("상품명과 판매가를 입력하세요.");return;}
   valid.forEach(function(l){
-    S.items[acc].push({id:Date.now()+Math.random(),category:cat,name:l.name.trim(),price:Number(l.price),stock:Number(l.stock)||0,soldCount:0,soldValue:0});
+    S.items[acc].push({id:Date.now()+Math.random(),category:cat,name:l.name.trim(),price:Number(l.price),stock:Number(l.stock)||0,soldCount:0,soldValue:0,images:[],desc:"",reserving:0});
   });
   saveS();closeModal();renderInv();alert(valid.length+"개 등록 완료!");
 }
@@ -1211,6 +1344,7 @@ function exportData(){
     items: S.items,
     orders: S.orders,
     catColors: S.catColors,
+    catImages: S.catImages,
     daily: S.daily,
     totals: S.totals,
     catOrder: S.catOrder,
@@ -1243,6 +1377,7 @@ function onImportFile(e){
         ACCS.forEach(function(a){ S.items[a] = Array.isArray(d.items&&d.items[a]) ? d.items[a] : []; });
         S.orders = Array.isArray(d.orders) ? d.orders : [];
         if(d.catColors && typeof d.catColors==="object") S.catColors = d.catColors;
+        if(d.catImages && typeof d.catImages==="object") S.catImages = d.catImages;
         if(d.daily && typeof d.daily==="object") S.daily = d.daily;
         if(d.totals && typeof d.totals==="object") S.totals = d.totals;
         if(d.catOrder && typeof d.catOrder==="object") S.catOrder = d.catOrder;
