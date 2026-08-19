@@ -590,13 +590,22 @@ function renderInv(){
     if(isOpen){
       var borderCol=bg.indexOf("#")>=0?bg.split("#")[1].split(/[,)]/)[0]:"FF6E41";
     h+="<div style='background:var(--card);border:2px solid #"+borderCol+";border-top:none;border-radius:0 0 14px 14px;overflow:hidden;margin-bottom:12px;'>";
+      var _catSets=(S.sets[acc]||[]).filter(function(s){
+        return s.itemIds.length>1 && s.itemIds.every(function(id){return ci.some(function(i){return i.id===id;});});
+      });
+      var _itemToSet={};
+      _catSets.forEach(function(s){ s.itemIds.forEach(function(id){ if(_itemToSet[id]===undefined) _itemToSet[id]=s; }); });
+      var _setRemain={};
+      _catSets.forEach(function(s){ _setRemain[s.id]=s.itemIds.length; });
+      var _setShown={};
       ci.forEach(function(item,idx){
         var sold=item.stock===0;
         var ek=acc+"_exp_"+item.id;
         var isExp=!!S.exp[ek];
         var last=idx===ci.length-1;
-        var rowBorder=last?"":"border-bottom:1.5px solid var(--bd);";
-        var rowBg=sold?"background:var(--erb);":"";
+        var inSet=_itemToSet[item.id];
+        var rowBorder=(last&&!inSet)?"":"border-bottom:1.5px solid var(--bd);";
+        var rowBg=sold?"background:var(--erb);":(inSet?"background:var(--ps);":"");
         var nc=sold?"#D93025":"#1A0F0A";
         var nd=sold?"line-through":"none";
         var sc2=sold?"#D93025":"#1A0F0A";
@@ -608,6 +617,10 @@ function renderInv(){
         var thumb=(item.images&&item.images[0])?item.images[0]:"";
         var _origP=item.origPrice||0;
         var _dPct=_origP>0&&_origP>item.price?Math.round((_origP-item.price)/_origP*100):0;
+        if(inSet && !_setShown[inSet.id]){
+          _setShown[inSet.id]=true;
+          h+="<div style='display:inline-flex;align-items:center;gap:4px;background:var(--p);color:#fff;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;margin-bottom:8px;'>🎁 "+escHtml(inSet.name)+"</div>";
+        }
         // Name row (full width, own line) — pencil moved next to trash on the right
         h+="<div style='display:flex;align-items:center;gap:4px;margin-bottom:8px;'>";
         h+="<div style='flex:1;min-width:0;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
@@ -674,6 +687,20 @@ function renderInv(){
           h+="</div>";
         }
         h+="</div>"; // end ir
+        if(inSet){
+          _setRemain[inSet.id]--;
+          if(_setRemain[inSet.id]===0){
+            var _setOrig=inSet.itemIds.reduce(function(a,id){var it=ci.find(function(i){return i.id===id;});return a+(it?it.price:0);},0);
+            var _setPct=_setOrig>0&&inSet.price<_setOrig?Math.round((_setOrig-inSet.price)/_setOrig*100):0;
+            h+="<div style='background:linear-gradient(135deg,var(--p),var(--pd));padding:12px 14px;display:flex;justify-content:space-between;align-items:center;"+(last?"":"border-bottom:1.5px solid var(--bd);")+"'>";
+            h+="<div><div style='font-size:11px;color:#fff;opacity:0.9;font-weight:800;'>🎁 "+escHtml(inSet.name)+" 세트가</div>";
+            h+="<div style='font-size:10px;color:#fff;opacity:0.7;text-decoration:line-through;margin-top:1px;'>"+krw(_setOrig)+"</div></div>";
+            h+="<div style='text-align:right;'>";
+            if(_setPct>0) h+="<div style='font-size:10px;font-weight:800;color:#fff;background:rgba(255,255,255,0.28);display:inline-block;padding:1px 8px;border-radius:20px;margin-bottom:2px;'>-"+_setPct+"%</div><br>";
+            h+="<span style='font-size:17px;font-weight:900;color:#fff;'>"+krw(inSet.price)+"</span></div>";
+            h+="</div>";
+          }
+        }
       });
       h+="</div>"; // end cat-body
     }
