@@ -129,6 +129,7 @@ input,select,button{font-family:inherit;}
 
 <script>
 var ACCS = ["Shibuki","MATJUIL","중고나라"];
+var SET_CLR = "#7C6FF0";
 var SHIPS = [{l:"일반택배",f:4000},{l:"알뜰택배",f:2500},{l:"택배비무료",f:0}];
 var COLORS = [
   {n:"오렌지", v:"linear-gradient(135deg,#FF6E41,#E85520)"},
@@ -613,30 +614,32 @@ function renderInv(){
         var last=idx===ci.length-1;
         var inSet=_itemToSet[item.id];
         var rowBorder=(last&&!inSet)?"":"border-bottom:1.5px solid var(--bd);";
-        var rowBg=sold?"background:var(--erb);":"";
+        var rowBg=sold?"background:#F5F5F5;":"";
         var nc=sold?"#D93025":"#1A0F0A";
-        var nd=sold?"line-through":"none";
         var sc2=sold?"#D93025":"#1A0F0A";
         var expBg=isExp?"#FF6E41":"#FFF0EB";
         var expIco=isExp?ICO.eu:ICO.ed;
-        var stClass=sold?"br":"bn";
+        var stClass="bn";
+        var nameBg=sold?"#E5E5E5":bg;
+        var nameColor=sold?"#8A8A8A":"#fff";
+        var iconBg=sold?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.25)";
 
         if(inSet && !_setShown[inSet.id]){
           _setShown[inSet.id]=true;
-          h+="<div style='margin:10px;border:3px solid #FFA726;border-radius:14px;overflow:hidden;'>";
+          h+="<div style='margin:10px;border:3px solid "+SET_CLR+";border-radius:14px;overflow:hidden;'>";
         }
         h+="<div class='ir' style='"+rowBorder+rowBg+"'>";
         var thumb=(item.images&&item.images[0])?item.images[0]:"";
         var _origP=item.origPrice||0;
         var _dPct=_origP>0&&_origP>item.price?Math.round((_origP-item.price)/_origP*100):0;
         // Name row (full width, own line) — pencil moved next to trash on the right
-        h+="<div style='display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:8px;background:"+bg+";border-radius:9px;padding:6px 6px 6px 12px;"+(sold?"opacity:0.45;":"")+"'>";
+        h+="<div style='display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:8px;background:"+nameBg+";border-radius:9px;padding:6px 6px 6px 12px;'>";
         h+="<div style='flex:1;min-width:0;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
-        h+="<span style='font-weight:800;font-size:13px;color:#fff;text-decoration:"+nd+";'>"+item.name+"</span>";
+        h+="<span style='font-weight:800;font-size:13px;color:"+nameColor+";'>"+item.name+"</span>";
         h+="</div>";
         h+="<div style='display:flex;align-items:center;gap:2px;flex-shrink:0;'>";
-        h+="<button style='background:rgba(255,255,255,0.25);border:none;color:#fff;cursor:pointer;padding:5px;border-radius:6px;font-size:12px;line-height:1;' onclick='openEdit(\""+acc+"\","+item.id+")'>✎</button>";
-        h+="<button style='background:rgba(255,255,255,0.25);border:none;color:#fff;cursor:pointer;padding:5px;border-radius:6px;line-height:1;' onclick='delItem(\""+acc+"\","+item.id+")'>"+ICO.trash+"</button>";
+        h+="<button style='background:"+iconBg+";border:none;color:"+nameColor+";cursor:pointer;padding:5px;border-radius:6px;font-size:12px;line-height:1;' onclick='openEdit(\""+acc+"\","+item.id+")'>✎</button>";
+        h+="<button style='background:"+iconBg+";border:none;color:"+nameColor+";cursor:pointer;padding:5px;border-radius:6px;line-height:1;' onclick='delItem(\""+acc+"\","+item.id+")'>"+ICO.trash+"</button>";
         h+="</div>";
         h+="</div>";
         // Image (left) + 2x2 stats grid (right): 판매가/재고 top, 총물품가/상세보기 bottom
@@ -646,7 +649,7 @@ function renderInv(){
         h+="</div>";
         h+="<div style='flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;'>";
         h+="<div class='bx bn' style='cursor:pointer;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;' onclick='togBunge("+item.id+")'><div class='bl' id='pl"+item.id+"'>판매가</div><div class='bv' id='pd"+item.id+"'>"+(_dPct>0?"<span style='font-size:7px;color:var(--txl);text-decoration:line-through;'>"+krw(_origP)+"</span> <span style='color:var(--er);font-weight:900;'>-"+_dPct+"%</span><br>"+krw(item.price):krw(item.price))+"</div></div>";
-        h+="<div class='bx "+stClass+"' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>재고</div>"+(sold?"<div class='bv' style='display:inline-block;background:var(--er);color:#fff;font-weight:800;padding:2px 9px;border-radius:20px;margin-top:1px;'>품절</div>":"<div class='bv' style='color:"+sc2+";'>"+item.stock+"개</div>")+"</div>";
+        h+="<div class='bx "+stClass+"' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>재고</div>"+(sold?"<div class='bv' style='display:inline-block;background:#E5E5E5;color:#8A8A8A;font-weight:800;padding:2px 9px;border-radius:20px;margin-top:1px;'>품절</div>":"<div class='bv' style='color:"+sc2+";'>"+item.stock+"개</div>")+"</div>";
         h+="<div class='bx bn' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>총물품가</div><div class='bv'>"+krw(item.price*item.stock)+"</div></div>";
         h+="<button onclick='togExp(\""+acc+"\","+item.id+")' style='background:"+expBg+";border:1.5px solid var(--pm);border-radius:8px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;gap:2px;'><span style='font-size:8px;font-weight:700;color:"+(isExp?"#fff":"var(--p)")+";'>상세보기</span><span>"+expIco+"</span></button>";
         h+="</div>";
@@ -703,21 +706,21 @@ function renderInv(){
             var _setOrig=inSet.itemIds.reduce(function(a,id){var it=ci.find(function(i){return i.id===id;});return a+(it?it.price:0);},0);
             var _setPct=_setOrig>0&&inSet.price<_setOrig?Math.round((_setOrig-inSet.price)/_setOrig*100):0;
             var _setStock=Math.min.apply(null,inSet.itemIds.map(function(id){var it=ci.find(function(i){return i.id===id;});return it?it.stock:0;}));
-            h+="<div style='background:linear-gradient(135deg,var(--p),var(--pd));padding:13px 14px;'>";
-            h+="<div style='display:inline-block;background:rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:8px;margin-bottom:8px;'>"+escHtml(inSet.name)+" 세트</div>";
+            h+="<div style='background:"+SET_CLR+";padding:10px 12px;'>";
+            h+="<div style='display:inline-block;background:rgba(255,255,255,0.25);color:#fff;font-size:10px;font-weight:800;padding:3px 9px;border-radius:7px;margin-bottom:6px;'>"+escHtml(inSet.name)+" 세트</div>";
             h+="<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;'>";
             h+="<div style='flex:1;min-width:0;'>";
-            h+="<div style='display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;'>";
-            h+="<span style='font-size:13px;color:var(--er);text-decoration:line-through;font-weight:700;'>"+krw(_setOrig)+"</span>";
-            h+="<span style='font-size:19px;font-weight:900;color:#fff;'>"+krw(inSet.price)+"</span>";
-            if(_setPct>0) h+="<span style='font-size:12px;font-weight:800;color:#fff;background:var(--er);padding:1px 8px;border-radius:20px;'>-"+_setPct+"%</span>";
+            h+="<div style='display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;'>";
+            h+="<span style='font-size:12px;color:var(--er);text-decoration:line-through;font-weight:700;'>"+krw(_setOrig)+"</span>";
+            h+="<span style='font-size:17px;font-weight:900;color:#fff;'>"+krw(inSet.price)+"</span>";
+            if(_setPct>0) h+="<span style='font-size:11px;font-weight:800;color:#fff;background:var(--er);padding:1px 7px;border-radius:20px;'>-"+_setPct+"%</span>";
             h+="</div></div>";
-            h+="<div style='background:#fff;border-radius:10px;padding:7px 13px;text-align:center;flex-shrink:0;'>";
+            h+="<div style='background:#fff;border-radius:9px;padding:5px 11px;text-align:center;flex-shrink:0;min-width:60px;'>";
+            h+="<div style='font-size:9px;color:var(--txs);font-weight:700;'>재고</div>";
             if(_setStock===0){
-              h+="<div style='font-size:11px;font-weight:800;color:var(--er);white-space:nowrap;'>판매불가</div>";
+              h+="<div style='font-size:10px;font-weight:800;color:var(--er);white-space:nowrap;'>판매불가</div>";
             } else {
-              h+="<div style='font-size:9px;color:var(--txs);font-weight:700;'>재고</div>";
-              h+="<div style='font-size:15px;font-weight:900;color:var(--tx);'>"+_setStock+"개</div>";
+              h+="<div style='font-size:14px;font-weight:900;color:var(--tx);'>"+_setStock+"개</div>";
             }
             h+="</div>";
             h+="</div></div>";
