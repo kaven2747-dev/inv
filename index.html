@@ -189,6 +189,7 @@ loadS();
 
 var ICO={
   trash:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
+  edit:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   plus:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   info:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
   cu:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>',
@@ -421,8 +422,8 @@ function renderSetsManagerModal(){
     h+="<div><div style='font-weight:800;font-size:13px;'>"+escHtml(s.name)+"</div>";
     h+="<div style='font-size:11px;color:var(--txs);margin-top:2px;'>"+its.map(function(i){return i.name;}).join(", ")+"</div></div>";
     h+="<div style='display:flex;gap:4px;flex-shrink:0;'>";
-    h+="<button style='background:none;border:none;color:var(--p);cursor:pointer;font-size:12px;padding:3px;' onclick='openSetForm(\""+s.id+"\")'>✎</button>";
-    h+="<button style='background:none;border:none;color:var(--txl);cursor:pointer;padding:3px;' onclick='delSet(\""+s.id+"\")'>"+ICO.trash+"</button>";
+    h+="<button style='background:none;border:none;color:var(--p);cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;' onclick='openSetForm(\""+s.id+"\")'>"+ICO.edit+"</button>";
+    h+="<button style='background:none;border:none;color:var(--txl);cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;' onclick='delSet(\""+s.id+"\")'>"+ICO.trash+"</button>";
     h+="</div></div>";
     h+="<div style='display:flex;align-items:center;gap:8px;font-size:12px;'>";
     if(pct>0){ h+="<span style='color:var(--txl);text-decoration:line-through;'>"+krw(origSum)+"</span><span style='color:var(--er);font-weight:800;'>-"+pct+"%</span>"; }
@@ -638,8 +639,8 @@ function renderInv(){
         h+="<span style='font-weight:800;font-size:13px;color:"+nameColor+";'>"+item.name+"</span>";
         h+="</div>";
         h+="<div style='display:flex;align-items:center;gap:2px;flex-shrink:0;'>";
-        h+="<button style='background:"+iconBg+";border:none;color:"+nameColor+";cursor:pointer;padding:5px;border-radius:6px;font-size:12px;line-height:1;' onclick='openEdit(\""+acc+"\","+item.id+")'>✎</button>";
-        h+="<button style='background:"+iconBg+";border:none;color:"+nameColor+";cursor:pointer;padding:5px;border-radius:6px;line-height:1;' onclick='delItem(\""+acc+"\","+item.id+")'>"+ICO.trash+"</button>";
+        h+="<button style='background:"+iconBg+";border:none;color:"+nameColor+";cursor:pointer;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:6px;flex-shrink:0;' onclick='openEdit(\""+acc+"\","+item.id+")'>"+ICO.edit+"</button>";
+        h+="<button style='background:"+iconBg+";border:none;color:"+nameColor+";cursor:pointer;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:6px;flex-shrink:0;' onclick='delItem(\""+acc+"\","+item.id+")'>"+ICO.trash+"</button>";
         h+="</div>";
         h+="</div>";
         // Image (left) + 2x2 stats grid (right): 판매가/재고 top, 총물품가/상세보기 bottom
