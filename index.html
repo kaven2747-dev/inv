@@ -6,12 +6,12 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
-<meta name="apple-mobile-web-app-title" content="재고관리"/>
+<meta name="apple-mobile-web-app-title" content="SINCERELY"/>
 <meta name="theme-color" content="#FF6E41"/>
 <meta name="description" content="재고 관리 앱"/>
 <link rel="manifest" id="pwa-manifest" href="./manifest.json"/>
 <link rel="apple-touch-icon" href="./icon-512.png"/>
-<title>재고 관리 (1)</title>
+<title>SINCERELY</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -213,8 +213,16 @@ function showModal(title,html){
 function closeModal(){ document.getElementById("ov").style.display="none"; }
 function closeModalOv(e){ if(e.target===document.getElementById("ov")) closeModal(); }
 
+function hashStr(s){
+  var h=0;
+  for(var i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; }
+  return h;
+}
 function catColor(acc,cat){
-  return S.catColors[acc+"_"+cat]||"linear-gradient(135deg,#FF6E41,#E85520)";
+  var saved=S.catColors[acc+"_"+cat];
+  if(saved) return saved;
+  var idx=hashStr(acc+"_"+cat)%COLORS.length;
+  return COLORS[idx].v;
 }
 
 // ── Category Edit ─────────────────────────────────
@@ -258,7 +266,7 @@ function renderCeImgBox(){
   var val=(document.getElementById("ce-img")||{}).value||"";
   var h="";
   if(val){
-    h+="<img src='"+val+"' style='width:48px;height:48px;object-fit:contain;background:#fff;border:1.5px solid var(--bd);border-radius:8px;padding:4px;'/>";
+    h+="<img src='"+val+"' style='width:48px;height:48px;object-fit:cover;border:1.5px solid var(--bd);border-radius:8px;'/>";
     h+="<button type='button' class='btn bg' style='padding:6px 10px;font-size:11px;' onclick=\"document.getElementById('ce-img-file').click()\">변경</button>";
     h+="<button type='button' class='btn' style='padding:6px 10px;font-size:11px;background:var(--erb);color:var(--er);border:1.5px solid var(--erd);' onclick='removeCeImg()'>제거</button>";
   }else{
@@ -322,7 +330,7 @@ function openSort(){
 function renderSortModal(){
   var h="<div style='display:flex;flex-direction:column;gap:8px;'>";
   _sortCats.forEach(function(cat,i){
-    var bg=S.catColors[_sortAcc+"_"+cat]||"linear-gradient(135deg,#FF6E41,#E85520)";
+    var bg=catColor(_sortAcc,cat);
     var isFirst=i===0;
     var isLast=i===_sortCats.length-1;
     h+="<div style='display:flex;align-items:center;gap:8px;'>";
@@ -415,7 +423,7 @@ function renderInv(){
     h+="<div style='display:flex;align-items:center;justify-content:space-between;border:none;cursor:pointer;color:#fff;padding:10px 14px;border-radius:"+rad+";background:"+bg+";' onclick='togCat(\""+ck+"\")'>";
     h+="<div style='display:flex;align-items:center;gap:10px;'>";
     var catImg=S.catImages[acc+"_"+cat]||"";
-    if(catImg) h+="<img src='"+catImg+"' style='width:46px;height:46px;object-fit:contain;background:#fff;border-radius:10px;padding:4px;flex-shrink:0;'/>";
+    if(catImg) h+="<img src='"+catImg+"' style='width:46px;height:46px;object-fit:cover;border-radius:10px;flex-shrink:0;'/>";
     h+="<div style='display:flex;flex-direction:column;align-items:flex-start;gap:3px;'>";
     h+="<div style='display:flex;align-items:center;gap:8px;'>";
     h+="<span style='font-size:15px;font-weight:900;'>"+cat+"</span>";
@@ -570,7 +578,7 @@ function togBunge(id){
   var pl=document.getElementById("pl"+id),pd=document.getElementById("pd"+id);
   var item=(S.items[S.acc]||[]).find(function(i){return i.id===id;});
   if(!item||!pl||!pd)return;
-  if(_bs[id]){pl.textContent="수령액";pd.textContent=krw(bunge(item.price));pd.style.color="#FF6E41";pl.style.color="#FF6E41";}
+  if(_bs[id]){pl.textContent="번장판매가";pd.textContent=krw(bunge(item.price));pd.style.color="#FF6E41";pl.style.color="#FF6E41";}
   else{pl.textContent="판매가";pd.textContent=krw(item.price);pd.style.color="";pl.style.color="";}
 }
 
