@@ -630,13 +630,13 @@ function renderInv(){
         var _origP=item.origPrice||0;
         var _dPct=_origP>0&&_origP>item.price?Math.round((_origP-item.price)/_origP*100):0;
         // Name row (full width, own line) — pencil moved next to trash on the right
-        h+="<div style='display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:8px;background:"+(sold?"var(--erb)":bg)+";border:1px solid "+(sold?"var(--erd)":"transparent")+";border-radius:9px;padding:6px 6px 6px 12px;'>";
+        h+="<div style='display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:8px;background:"+bg+";border-radius:9px;padding:6px 6px 6px 12px;"+(sold?"opacity:0.45;":"")+"'>";
         h+="<div style='flex:1;min-width:0;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
-        h+="<span style='font-weight:800;font-size:13px;color:"+(sold?nc:"#fff")+";text-decoration:"+nd+";'>"+item.name+"</span>";
+        h+="<span style='font-weight:800;font-size:13px;color:#fff;text-decoration:"+nd+";'>"+item.name+"</span>";
         h+="</div>";
         h+="<div style='display:flex;align-items:center;gap:2px;flex-shrink:0;'>";
-        h+="<button style='background:"+(sold?"none":"rgba(255,255,255,0.25)")+";border:none;color:"+(sold?"var(--txl)":"#fff")+";cursor:pointer;padding:5px;border-radius:6px;font-size:12px;line-height:1;' onclick='openEdit(\""+acc+"\","+item.id+")'>✎</button>";
-        h+="<button style='background:"+(sold?"none":"rgba(255,255,255,0.25)")+";border:none;color:"+(sold?"var(--txl)":"#fff")+";cursor:pointer;padding:5px;border-radius:6px;line-height:1;' onclick='delItem(\""+acc+"\","+item.id+")'>"+ICO.trash+"</button>";
+        h+="<button style='background:rgba(255,255,255,0.25);border:none;color:#fff;cursor:pointer;padding:5px;border-radius:6px;font-size:12px;line-height:1;' onclick='openEdit(\""+acc+"\","+item.id+")'>✎</button>";
+        h+="<button style='background:rgba(255,255,255,0.25);border:none;color:#fff;cursor:pointer;padding:5px;border-radius:6px;line-height:1;' onclick='delItem(\""+acc+"\","+item.id+")'>"+ICO.trash+"</button>";
         h+="</div>";
         h+="</div>";
         // Image (left) + 2x2 stats grid (right): 판매가/재고 top, 총물품가/상세보기 bottom
