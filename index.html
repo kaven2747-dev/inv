@@ -648,11 +648,16 @@ function renderInv(){
         h+="<div style='width:84px;height:84px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
         h+= thumb ? "<img src='"+thumb+"' style='width:100%;height:100%;object-fit:cover;'/>" : "<span style='font-size:26px;color:var(--txl);'>🖼</span>";
         h+="</div>";
-        h+="<div style='flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;'>";
+        var hasIndiv=(item.indivPrice>0 && item.indivStock>0);
+        h+="<div style='flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat("+(hasIndiv?3:2)+",1fr);gap:4px;'>";
         h+="<div class='bx bn' style='cursor:pointer;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;' onclick='togBunge("+item.id+")'><div class='bl' id='pl"+item.id+"'>판매가</div><div class='bv' id='pd"+item.id+"'>"+(_dPct>0?"<span style='font-size:7px;color:var(--txl);text-decoration:line-through;'>"+krw(_origP)+"</span> <span style='color:var(--er);font-weight:900;'>-"+_dPct+"%</span><br>"+krw(item.price):krw(item.price))+"</div></div>";
         h+="<div class='bx "+stClass+"' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>재고</div>"+(sold?"<div class='bv' style='display:inline-block;background:#E5E5E5;color:#8A8A8A;font-weight:800;padding:2px 9px;border-radius:20px;margin-top:1px;'>품절</div>":"<div class='bv' style='color:"+sc2+";'>"+item.stock+"개</div>")+"</div>";
         h+="<div class='bx bn' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>총물품가</div><div class='bv'>"+krw(item.price*item.stock)+"</div></div>";
         h+="<button onclick='togExp(\""+acc+"\","+item.id+")' style='background:"+expBg+";border:1.5px solid var(--pm);border-radius:8px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;gap:2px;'><span style='font-size:8px;font-weight:700;color:"+(isExp?"#fff":"var(--p)")+";'>상세보기</span><span>"+expIco+"</span></button>";
+        if(hasIndiv){
+          h+="<div class='bx ba' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>낱개가</div><div class='bv'>"+krw(item.indivPrice)+"</div></div>";
+          h+="<div class='bx ba' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>낱개재고</div><div class='bv'>"+item.indivStock+"개</div></div>";
+        }
         h+="</div>";
         h+="</div>"; // end image+stats row
         // Expanded
@@ -835,6 +840,13 @@ function openAdd(){
   h+="<input class='inp' type='number' id='ai-price' placeholder='10000' oninput='updBunge()'/>";
   h+="<div id='ai-bunge' style='display:none;margin-top:6px;background:var(--ps);border:1px solid var(--pm);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--p);font-weight:700;'></div></div>";
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>초기 재고</label><input class='inp' type='number' id='ai-stock' value='1'/></div>";
+  h+="<div><button type='button' id='ai-indiv-btn' onclick='toggleAddIndiv()' style='font-size:12px;font-weight:700;color:var(--p);background:var(--ps);border:1.5px solid var(--pm);border-radius:8px;padding:8px 14px;cursor:pointer;'>+ 낱개도 계산</button></div>";
+  h+="<div id='ai-indiv-box' style='display:none;background:var(--bg);border:1.5px solid var(--bd);border-radius:10px;padding:12px;'>";
+  h+="<div style='font-size:11px;color:var(--txs);font-weight:700;margin-bottom:8px;'>🔹 낱개 판매 정보 (세트와 별도)</div>";
+  h+="<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px;'>";
+  h+="<div><label style='font-size:10px;color:var(--txs);display:block;margin-bottom:4px;'>낱개 재고</label><input class='inp' type='number' id='ai-istock' placeholder='0'/></div>";
+  h+="<div><label style='font-size:10px;color:var(--txs);display:block;margin-bottom:4px;'>낱개 판매가</label><input class='inp' type='number' id='ai-iprice' placeholder='0'/></div>";
+  h+="</div></div>";
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상품 사진 (최대 4장, 첫 장이 대표사진)</label>";
   h+="<div id='ai-images' style='display:grid;grid-template-columns:repeat(4,1fr);gap:6px;'></div></div>";
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상세 설명</label>";
@@ -854,14 +866,26 @@ function updBunge(){
   if(!el)return;
   if(p>0){el.style.display="block";el.textContent="번개장터 가이드가 → "+krw(bunge(p));}else el.style.display="none";
 }
+function toggleAddIndiv(){
+  var box=document.getElementById("ai-indiv-box");
+  var btn=document.getElementById("ai-indiv-btn");
+  if(!box)return;
+  var show=box.style.display==="none";
+  box.style.display=show?"block":"none";
+  if(btn) btn.textContent=show?"− 낱개 계산 취소":"+ 낱개도 계산";
+}
 function submitAdd(acc){
   var cat=((document.getElementById("ai-cat")||{}).value||"").trim();
   var name=((document.getElementById("ai-name")||{}).value||"").trim();
   var price=Number((document.getElementById("ai-price")||{}).value||0);
   var stock=Number((document.getElementById("ai-stock")||{}).value||0);
   var desc=((document.getElementById("ai-desc")||{}).value||"").trim();
+  var iStock=Number((document.getElementById("ai-istock")||{}).value||0);
+  var iPrice=Number((document.getElementById("ai-iprice")||{}).value||0);
   if(!cat||!name||!price){alert("분류, 상품명, 판매가를 입력하세요.");return;}
-  S.items[acc].push({id:Date.now(),category:cat,name:name,price:price,stock:stock,soldCount:0,soldValue:0,images:_addImages.slice(0,4),desc:desc,reserving:0});
+  var newItem={id:Date.now(),category:cat,name:name,price:price,stock:stock,soldCount:0,soldValue:0,images:_addImages.slice(0,4),desc:desc,reserving:0};
+  if(iStock>0&&iPrice>0){ newItem.indivStock=iStock; newItem.indivPrice=iPrice; }
+  S.items[acc].push(newItem);
   saveS();closeModal();renderInv();
 }
 
@@ -897,6 +921,14 @@ function openEdit(acc,id){
   h+="</div>";
   h+="<div id='disc-preview' style='display:none;margin-top:8px;background:var(--okb);border:1px solid #8EDCBA;border-radius:7px;padding:7px 10px;font-size:12px;color:var(--ok);font-weight:700;'></div>";
   h+="</div>";
+  var hasIndiv=(item.indivPrice>0&&item.indivStock>0);
+  h+="<div><button type='button' id='ei-indiv-btn' onclick='toggleEditIndiv()' style='font-size:12px;font-weight:700;color:var(--p);background:var(--ps);border:1.5px solid var(--pm);border-radius:8px;padding:8px 14px;cursor:pointer;'>"+(hasIndiv?"− 낱개 계산 취소":"+ 낱개도 계산")+"</button></div>";
+  h+="<div id='ei-indiv-box' style='display:"+(hasIndiv?"block":"none")+";background:var(--bg);border:1.5px solid var(--bd);border-radius:10px;padding:12px;'>";
+  h+="<div style='font-size:11px;color:var(--txs);font-weight:700;margin-bottom:8px;'>🔹 낱개 판매 정보 (세트와 별도)</div>";
+  h+="<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px;'>";
+  h+="<div><label style='font-size:10px;color:var(--txs);display:block;margin-bottom:4px;'>낱개 재고</label><input class='inp' type='number' id='ei-istock' value='"+(item.indivStock||"")+"' placeholder='0'/></div>";
+  h+="<div><label style='font-size:10px;color:var(--txs);display:block;margin-bottom:4px;'>낱개 판매가</label><input class='inp' type='number' id='ei-iprice' value='"+(item.indivPrice||"")+"' placeholder='0'/></div>";
+  h+="</div></div>";
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상품 사진 (최대 4장, 첫 장이 대표사진)</label>";
   h+="<div id='ei-images' style='display:grid;grid-template-columns:repeat(4,1fr);gap:6px;'></div></div>";
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상세 설명</label>";
@@ -973,6 +1005,14 @@ function updEditBunge(){
   var el=document.getElementById("eb");
   if(el&&p>0)el.textContent="번개장터 가이드가 → "+krw(bunge(p));
 }
+function toggleEditIndiv(){
+  var box=document.getElementById("ei-indiv-box");
+  var btn=document.getElementById("ei-indiv-btn");
+  if(!box)return;
+  var show=box.style.display==="none";
+  box.style.display=show?"block":"none";
+  if(btn) btn.textContent=show?"− 낱개 계산 취소":"+ 낱개도 계산";
+}
 function submitEdit(){
   var acc=document.getElementById("ea").value;
   var id=Number(document.getElementById("ei").value);
@@ -980,6 +1020,8 @@ function submitEdit(){
   var price=Number((document.getElementById("ep")||{}).value||0);
   var origPrice=Number((document.getElementById("orig-price")||{}).value||0);
   var desc=((document.getElementById("e-desc")||{}).value||"").trim();
+  var iStock=Number((document.getElementById("ei-istock")||{}).value||0);
+  var iPrice=Number((document.getElementById("ei-iprice")||{}).value||0);
   if(!name||!price){alert("상품명과 판매가를 입력하세요.");return;}
   S.items[acc]=S.items[acc].map(function(i){
     if(i.id!==id) return i;
@@ -987,6 +1029,8 @@ function submitEdit(){
     // Save origPrice only if discount was applied
     if(origPrice>0&&price<origPrice) newItem.origPrice=origPrice;
     else if(price===origPrice||!origPrice) delete newItem.origPrice;
+    if(iStock>0&&iPrice>0){ newItem.indivStock=iStock; newItem.indivPrice=iPrice; }
+    else { delete newItem.indivStock; delete newItem.indivPrice; }
     return newItem;
   });
   saveS();closeModal();renderInv();
