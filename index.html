@@ -631,8 +631,8 @@ function renderInv(){
         var _dPct=_origP>0&&_origP>item.price?Math.round((_origP-item.price)/_origP*100):0;
         // Name row (full width, own line) — pencil moved next to trash on the right
         h+="<div style='display:flex;align-items:center;gap:4px;margin-bottom:8px;'>";
-        h+="<div style='flex:1;min-width:0;cursor:pointer;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
-        h+="<span style='font-weight:700;font-size:13px;color:"+nc+";text-decoration:"+nd+";'>"+item.name+"</span>";
+        h+="<div style='flex:1;min-width:0;cursor:pointer;background:"+(sold?"var(--erb)":"var(--bg)")+";border:1px solid "+(sold?"var(--erd)":"var(--bd)")+";border-radius:9px;padding:7px 12px;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
+        h+="<span style='font-weight:800;font-size:13px;color:"+nc+";text-decoration:"+nd+";'>"+item.name+"</span>";
         h+="</div>";
         h+="<button style='background:none;border:none;color:var(--txl);cursor:pointer;padding:4px;flex-shrink:0;font-size:13px;' onclick='openEdit(\""+acc+"\","+item.id+")'>✎</button>";
         h+="<button style='background:none;border:none;color:var(--txl);cursor:pointer;padding:4px;flex-shrink:0;' onclick='delItem(\""+acc+"\","+item.id+")'>"+ICO.trash+"</button>";
@@ -702,17 +702,21 @@ function renderInv(){
             var _setPct=_setOrig>0&&inSet.price<_setOrig?Math.round((_setOrig-inSet.price)/_setOrig*100):0;
             var _setStock=Math.min.apply(null,inSet.itemIds.map(function(id){var it=ci.find(function(i){return i.id===id;});return it?it.stock:0;}));
             h+="<div style='background:linear-gradient(135deg,var(--p),var(--pd));padding:13px 14px;'>";
+            h+="<div style='display:inline-block;background:rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:8px;margin-bottom:8px;'>"+escHtml(inSet.name)+" 세트</div>";
             h+="<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;'>";
             h+="<div style='flex:1;min-width:0;'>";
-            h+="<div style='font-size:11px;color:#fff;opacity:0.85;font-weight:800;margin-bottom:5px;'>"+escHtml(inSet.name)+" 세트</div>";
             h+="<div style='display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;'>";
-            h+="<span style='font-size:13px;color:#fff;opacity:0.7;text-decoration:line-through;'>"+krw(_setOrig)+"</span>";
+            h+="<span style='font-size:13px;color:var(--er);text-decoration:line-through;font-weight:700;'>"+krw(_setOrig)+"</span>";
             h+="<span style='font-size:19px;font-weight:900;color:#fff;'>"+krw(inSet.price)+"</span>";
-            if(_setPct>0) h+="<span style='font-size:12px;font-weight:800;color:#fff;background:rgba(255,255,255,0.28);padding:1px 8px;border-radius:20px;'>-"+_setPct+"%</span>";
+            if(_setPct>0) h+="<span style='font-size:12px;font-weight:800;color:#fff;background:var(--er);padding:1px 8px;border-radius:20px;'>-"+_setPct+"%</span>";
             h+="</div></div>";
-            h+="<div style='background:rgba(255,255,255,0.2);border-radius:10px;padding:7px 13px;text-align:center;flex-shrink:0;'>";
-            h+="<div style='font-size:9px;color:#fff;opacity:0.85;font-weight:700;'>재고</div>";
-            h+="<div style='font-size:15px;font-weight:900;color:#fff;'>"+_setStock+"개</div>";
+            h+="<div style='background:#fff;border-radius:10px;padding:7px 13px;text-align:center;flex-shrink:0;'>";
+            if(_setStock===0){
+              h+="<div style='font-size:11px;font-weight:800;color:var(--er);white-space:nowrap;'>판매불가</div>";
+            } else {
+              h+="<div style='font-size:9px;color:var(--txs);font-weight:700;'>재고</div>";
+              h+="<div style='font-size:15px;font-weight:900;color:var(--tx);'>"+_setStock+"개</div>";
+            }
             h+="</div>";
             h+="</div></div>";
             h+="</div>"; // close set wrapper border box
