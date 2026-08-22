@@ -83,6 +83,8 @@ input,select,button{font-family:inherit;}
 .gbx .gv{font-size:12px;font-weight:900;color:#fff;}
 .pc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div id="app">
@@ -177,11 +179,73 @@ function loadS(){
 }
 function saveS(){
   try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder})); }catch(e){}
+  cloudPush();
 }
 function escHtml(s){
   return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 loadS();
+
+// ── Cloud sync (Firebase) ──────────────────────────
+var firebaseConfig={apiKey:"AIzaSyAEHvHBxhMPkXTunTl3R4OiEF-EES9XDiQ",authDomain:"matjuil.firebaseapp.com",projectId:"matjuil",storageBucket:"matjuil.firebasestorage.app",messagingSenderId:"860640396737",appId:"1:860640396737:web:b0c593712b903478f59b40"};
+var _cloudDocRef=null, _cloudSaveTimer=null, _applyingRemote=false, _cloudFirstSnap=true;
+try{
+  firebase.initializeApp(firebaseConfig);
+  _cloudDocRef=firebase.firestore().collection("sincerely").doc("inventory");
+  cloudSubscribe();
+}catch(e){ console.error("firebase init failed",e); }
+
+function cloudPush(){
+  if(_applyingRemote||!_cloudDocRef) return;
+  if(_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
+  _cloudSaveTimer=setTimeout(function(){
+    var payload={items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,updatedAt:Date.now()};
+    _cloudDocRef.set(payload).catch(function(err){ showCloudMsg("⚠ 클라우드 저장 실패: "+(err&&err.message||"오류")+" (로컬 저장은 정상)",true); });
+  },600);
+}
+function cloudSubscribe(){
+  _cloudDocRef.onSnapshot(function(snap){
+    if(snap.metadata.hasPendingWrites) return; // 내가 방금 쓴 로컬 반영 에코는 무시
+    var d=snap.data();
+    if(!d){ if(_cloudFirstSnap){_cloudFirstSnap=false; cloudPush();} return; }
+    _applyingRemote=true;
+    ACCS.forEach(function(a){ S.items[a]=Array.isArray(d.items&&d.items[a])?d.items[a]:(S.items[a]||[]); });
+    S.orders=Array.isArray(d.orders)?d.orders:S.orders;
+    if(d.catColors&&typeof d.catColors==="object") S.catColors=d.catColors;
+    if(d.catImages&&typeof d.catImages==="object") S.catImages=d.catImages;
+    if(d.daily&&typeof d.daily==="object") S.daily=d.daily;
+    if(d.totals&&typeof d.totals==="object") S.totals=d.totals;
+    if(d.catOrder&&typeof d.catOrder==="object") S.catOrder=d.catOrder;
+    try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder})); }catch(e){}
+    if(!_cloudFirstSnap) showCloudMsg("✅ 다른 기기에서 변경된 내용을 불러왔어요",false);
+    _cloudFirstSnap=false;
+    renderCurrent();
+    _applyingRemote=false;
+  },function(err){ showCloudMsg("⚠ 클라우드 연결 실패: "+(err&&err.message||"오류"),true); });
+}
+function renderCurrent(){
+  var t=document.querySelector(".tab.on");
+  var id=t?t.id.replace("t-",""):"inv";
+  if(id==="inv") renderInv();
+  else if(id==="sale") renderSale();
+  else if(id==="ship") renderShip();
+  else if(id==="stat") renderStat();
+}
+function showCloudMsg(msg,isErr){
+  var b=document.getElementById("cloud-msg");
+  if(!b){
+    b=document.createElement("div");
+    b.id="cloud-msg";
+    b.style.cssText="position:fixed;bottom:66px;left:50%;transform:translateX(-50%);max-width:92%;padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;z-index:2000;box-shadow:0 4px 14px rgba(0,0,0,0.2);text-align:center;";
+    document.body.appendChild(b);
+  }
+  b.style.background=isErr?"#D93025":"#0F9E6E";
+  b.style.color="#fff";
+  b.textContent=msg;
+  b.style.display="block";
+  clearTimeout(b._t);
+  b._t=setTimeout(function(){ b.style.display="none"; },3500);
+}
 
 var ICO={
   trash:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
@@ -211,7 +275,7 @@ function showModal(title,html){
   document.getElementById("ov").style.display="flex";
 }
 function closeModal(){ document.getElementById("ov").style.display="none"; }
-function closeModalOv(e){ if(e.target===document.getElementById("ov")) closeModal(); }
+function closeModalOv(e){ /* 바깥 영역 눌러도 닫히지 않도록 비활성화 — X 버튼으로만 닫힘 */ }
 
 function hashStr(s){
   var h=0;
