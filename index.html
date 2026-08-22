@@ -159,7 +159,7 @@ var S={
   orders:[],acc:"Shibuki",
   catOrder:{}, // acc -> [cat, cat, ...]
   shipTab:"pend", // pending | done
-  col:{},exp:{},imgV:{},descV:{},catColors:{},catImages:{},daily:{},totals:{},
+  col:{},exp:{},imgV:{},descV:{},catColors:{},catImages:{},daily:{},totals:{},itemOrder:{},
   sets:{},
   sAcc:"",sLines:[{cat:"",iid:"",qty:1}],sShip:null,sSetOverride:null
 };
@@ -178,11 +178,12 @@ function loadS(){
     if(d.totals&&typeof d.totals==="object") S.totals=d.totals;
     if(d.catOrder&&typeof d.catOrder==="object") S.catOrder=d.catOrder;
     if(d.sets&&typeof d.sets==="object") S.sets=d.sets;
+    if(d.itemOrder&&typeof d.itemOrder==="object") S.itemOrder=d.itemOrder;
   }catch(e){}
   pruneAllSets();
 }
 function saveS(){
-  try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets})); }catch(e){}
+  try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,itemOrder:S.itemOrder})); }catch(e){}
   cloudPush();
 }
 function escHtml(s){
@@ -203,7 +204,7 @@ function cloudPush(){
   if(_applyingRemote||!_cloudDocRef) return;
   if(_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
   _cloudSaveTimer=setTimeout(function(){
-    var payload={items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,updatedAt:Date.now()};
+    var payload={items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,itemOrder:S.itemOrder,updatedAt:Date.now()};
     _cloudDocRef.set(payload).catch(function(err){ showCloudMsg("⚠ 클라우드 저장 실패: "+(err&&err.message||"오류")+" (로컬 저장은 정상)",true); });
   },600);
 }
@@ -221,8 +222,9 @@ function cloudSubscribe(){
     if(d.totals&&typeof d.totals==="object") S.totals=d.totals;
     if(d.catOrder&&typeof d.catOrder==="object") S.catOrder=d.catOrder;
     if(d.sets&&typeof d.sets==="object") S.sets=d.sets;
+    if(d.itemOrder&&typeof d.itemOrder==="object") S.itemOrder=d.itemOrder;
     pruneAllSets();
-    try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets})); }catch(e){}
+    try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,itemOrder:S.itemOrder})); }catch(e){}
     if(!_cloudFirstSnap) showCloudMsg("✅ 다른 기기에서 변경된 내용을 불러왔어요",false);
     _cloudFirstSnap=false;
     renderCurrent();
@@ -432,6 +434,55 @@ function saveSort(){
   saveS();closeModal();renderInv();
 }
 
+// ── 상품(재고) 순서 변경 ────────────────────────────
+var _itSortAcc="", _itSortCat="", _itSortIds=[];
+function openItemSort(acc,cat){
+  _itSortAcc=acc; _itSortCat=cat;
+  var ci=(S.items[acc]||[]).filter(function(i){return i.category===cat;});
+  var rawIds=ci.map(function(i){return i.id;});
+  var saved=S.itemOrder[acc+"_"+cat]||[];
+  _itSortIds=saved.filter(function(id){return rawIds.indexOf(id)>=0;});
+  rawIds.forEach(function(id){ if(_itSortIds.indexOf(id)<0) _itSortIds.push(id); });
+  renderItemSortModal();
+}
+function renderItemSortModal(){
+  var items=(S.items[_itSortAcc]||[]);
+  var byId={}; items.forEach(function(i){ byId[i.id]=i; });
+  var h="<div style='display:flex;flex-direction:column;gap:8px;'>";
+  _itSortIds.forEach(function(id,i){
+    var it=byId[id]; if(!it) return;
+    var isFirst=i===0, isLast=i===_itSortIds.length-1;
+    var thumb=(it.images&&it.images[0])?it.images[0]:"";
+    h+="<div style='display:flex;align-items:center;gap:8px;'>";
+    h+="<div style='flex:1;display:flex;align-items:center;gap:10px;background:var(--bg);border:1.5px solid var(--bd);border-radius:10px;padding:8px 12px;min-width:0;'>";
+    h+="<div style='width:34px;height:34px;border-radius:7px;overflow:hidden;flex-shrink:0;background:#fff;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;'>"+(thumb?"<img src='"+thumb+"' style='width:100%;height:100%;object-fit:cover;'/>":"<span style='font-size:14px;color:var(--txl);'>🖼</span>")+"</div>";
+    h+="<span style='font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>"+escHtml(it.name)+"</span>";
+    h+="</div>";
+    h+="<div style='display:flex;flex-direction:column;gap:4px;'>";
+    h+="<button type='button' onclick='moveItemSort("+i+",-1)' "+(isFirst?"disabled":"")+
+       " style='width:36px;height:36px;border-radius:10px;border:1.5px solid var(--bd);background:"+(isFirst?"#F7F3F1":"#fff")+";color:"+(isFirst?"#C4A090":"#FF6E41")+";cursor:"+(isFirst?"default":"pointer")+";font-size:16px;font-weight:700;'>▲</button>";
+    h+="<button type='button' onclick='moveItemSort("+i+",1)' "+(isLast?"disabled":"")+
+       " style='width:36px;height:36px;border-radius:10px;border:1.5px solid var(--bd);background:"+(isLast?"#F7F3F1":"#fff")+";color:"+(isLast?"#C4A090":"#FF6E41")+";cursor:"+(isLast?"default":"pointer")+";font-size:16px;font-weight:700;'>▼</button>";
+    h+="</div></div>";
+  });
+  if(!_itSortIds.length){ h+="<div style='font-size:12px;color:var(--txl);padding:10px 2px;'>이 분류에 상품이 없습니다.</div>"; }
+  h+="</div>";
+  h+="<button type='button' class='btn bp' style='width:100%;padding:12px;font-size:14px;margin-top:16px;' onclick='saveItemSort()'>순서 저장</button>";
+  showModal(escHtml(_itSortCat)+" — 상품 순서 변경", h);
+}
+function moveItemSort(i,dir){
+  var j=i+dir;
+  if(j<0||j>=_itSortIds.length) return;
+  var tmp=_itSortIds[i];
+  _itSortIds[i]=_itSortIds[j];
+  _itSortIds[j]=tmp;
+  renderItemSortModal();
+}
+function saveItemSort(){
+  S.itemOrder[_itSortAcc+"_"+_itSortCat]=_itSortIds.slice();
+  saveS();closeModal();renderInv();
+}
+
 // ── SET (묶음할인) ────────────────────────────────
 function findMatchingSet(acc, lines, items){
   var sets=S.sets[acc]||[];
@@ -634,6 +685,14 @@ function renderInv(){
 
   cats.forEach(function(cat){
     var ci=items.filter(function(i){return i.category===cat;});
+    var _io=S.itemOrder[acc+"_"+cat];
+    if(_io&&_io.length){
+      ci.sort(function(a,b){
+        var ia=_io.indexOf(a.id), ib=_io.indexOf(b.id);
+        if(ia<0) ia=999999; if(ib<0) ib=999999;
+        return ia-ib;
+      });
+    }
     var ck=acc+"_"+cat;
     var isOpen=!S.col[ck];
     var bg=catColor(acc,cat);
@@ -658,6 +717,7 @@ function renderInv(){
     h+="</div>";
     h+="<div style='display:flex;align-items:center;gap:8px;'>";
     // Edit button — uses data attributes, onclick stops propagation
+    h+="<button type='button' onclick='event.stopPropagation();openItemSort(\""+acc+"\",\""+escHtml(cat).replace(/'/g,"\\'")+"\")' style='background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);border-radius:8px;color:#fff;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:700;'>↕ 순서</button>";
     h+="<button type='button' data-acc='"+acc+"' data-cat='"+cat+"' onclick='event.stopPropagation();editCat(this)' style='background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);border-radius:8px;color:#fff;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:700;'>수정</button>";
     h+=chev;
     h+="</div>";
