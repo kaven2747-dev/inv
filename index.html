@@ -183,6 +183,7 @@ function loadS(){
   pruneAllSets();
 }
 function saveS(){
+  _localEditAt=Date.now();
   try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,itemOrder:S.itemOrder})); }catch(e){}
   cloudPush();
 }
@@ -193,7 +194,7 @@ loadS();
 
 // ── Cloud sync (Firebase) ──────────────────────────
 var firebaseConfig={apiKey:"AIzaSyAEHvHBxhMPkXTunTl3R4OiEF-EES9XDiQ",authDomain:"matjuil.firebaseapp.com",projectId:"matjuil",storageBucket:"matjuil.firebasestorage.app",messagingSenderId:"860640396737",appId:"1:860640396737:web:b0c593712b903478f59b40"};
-var _cloudDocRef=null, _cloudSaveTimer=null, _applyingRemote=false, _cloudFirstSnap=true;
+var _cloudDocRef=null, _cloudSaveTimer=null, _applyingRemote=false, _cloudFirstSnap=true, _localEditAt=0;
 try{
   firebase.initializeApp(firebaseConfig);
   _cloudDocRef=firebase.firestore().collection("sincerely").doc("inventory");
@@ -203,8 +204,9 @@ try{
 function cloudPush(){
   if(_applyingRemote||!_cloudDocRef) return;
   if(_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
+  var myEditAt=_localEditAt;
   _cloudSaveTimer=setTimeout(function(){
-    var payload={items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,itemOrder:S.itemOrder,updatedAt:Date.now()};
+    var payload={items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,itemOrder:S.itemOrder,updatedAt:myEditAt};
     _cloudDocRef.set(payload).catch(function(err){ showCloudMsg("⚠ 클라우드 저장 실패: "+(err&&err.message||"오류")+" (로컬 저장은 정상)",true); });
   },600);
 }
@@ -213,6 +215,9 @@ function cloudSubscribe(){
     if(snap.metadata.hasPendingWrites) return; // 내가 방금 쓴 로컬 반영 에코는 무시
     var d=snap.data();
     if(!d){ if(_cloudFirstSnap){_cloudFirstSnap=false; cloudPush();} return; }
+    // 방금 로컬에서 편집 중/편집 직후인데 그보다 오래된(또는 같은 시점 이전) 클라우드 데이터가 오면 무시 — 덮어쓰기 방지
+    var remoteAt=d.updatedAt||0;
+    if(remoteAt>0 && remoteAt<_localEditAt) return;
     _applyingRemote=true;
     ACCS.forEach(function(a){ S.items[a]=Array.isArray(d.items&&d.items[a])?d.items[a]:(S.items[a]||[]); });
     S.orders=Array.isArray(d.orders)?d.orders:S.orders;
