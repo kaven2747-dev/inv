@@ -130,7 +130,7 @@ input,select,button{font-family:inherit;}
 </div>
 
 <script>
-var ACCS = ["Shibuki","MATJUIL","중고나라"];
+var ACCS = ["Shibuki","MATJUIL","중고나라","Card"];
 var SET_CLR = "#7C6FF0";
 var SHIPS = [{l:"일반택배",f:4000},{l:"알뜰택배",f:2500},{l:"택배비무료",f:0}];
 var COLORS = [
@@ -678,6 +678,9 @@ function renderInv(){
   h+="<button class='btn' style='font-size:12px;padding:8px 0;background:#fff;color:var(--p);border:1.5px solid var(--pm);' onclick='openBulk()'>일괄 추가</button>";
   h+="<button class='btn bp' style='font-size:12px;padding:8px 0;display:flex;align-items:center;justify-content:center;gap:3px;' onclick='openAdd()'>"+ICO.plus+" 상품 추가</button>";
   h+="</div>";
+  if(acc==="Card"){
+    h+="<button class='btn' style='width:100%;font-size:12px;padding:8px 0;background:var(--ps);color:var(--p);border:1.5px solid var(--pm);margin-bottom:12px;' onclick='openMarketBulk()'>🃏 시세 일괄 입력</button>";
+  }
 
   if(!items.length){
     h+="<div style='text-align:center;padding:50px 0;color:var(--txl);'><div style='font-size:42px;margin-bottom:10px;'>📦</div><div style='font-weight:700;color:var(--txs);'>등록된 상품 없음</div></div>";
@@ -762,6 +765,7 @@ function renderInv(){
         // Name row (full width, own line) — 수정/삭제 버튼은 상세보기에서만 표시
         h+="<div style='margin-bottom:8px;cursor:pointer;background:"+nameBg+";border-radius:9px;padding:8px 12px;' onclick='openEdit(\""+acc+"\","+item.id+")'>";
         h+="<span style='font-weight:800;font-size:12px;line-height:1.4;color:"+nameColor+";'>"+item.name+"</span>";
+        if(item.cardNo) h+="<span style='margin-left:6px;font-size:10px;font-weight:700;color:"+nameColor+";opacity:0.75;'>#"+escHtml(item.cardNo)+"</span>";
         h+="</div>";
         // Image (left) + 2x2 stats grid (right): 판매가/재고 top, 총물품가/상세보기 bottom
         h+="<div style='display:flex;align-items:stretch;gap:10px;'>";
@@ -769,9 +773,17 @@ function renderInv(){
         h+= thumb ? "<img src='"+thumb+"' style='width:100%;height:100%;object-fit:cover;'/>" : "<span style='font-size:26px;color:var(--txl);'>🖼</span>";
         h+="</div>";
         var hasIndiv=(item.indivPrice>0 && item.indivStock>0);
-        h+="<div style='flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat("+(hasIndiv?3:2)+",1fr);gap:4px;'>";
+        var hasMarket=item.marketPrice>0;
+        h+="<div style='flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat("+(2+(hasIndiv?1:0)+(hasMarket?1:0))+",1fr);gap:4px;'>";
         h+="<div class='bx bn' style='cursor:pointer;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;' onclick='togBunge("+item.id+")'><div class='bl' id='pl"+item.id+"'>판매가</div><div class='bv' id='pd"+item.id+"'>"+(_dPct>0?"<span style='font-size:7px;color:var(--txl);text-decoration:line-through;'>"+krw(_origP)+"</span> <span style='color:var(--er);font-weight:900;'>-"+_dPct+"%</span><br>"+krw(item.price):krw(item.price))+"</div></div>";
         h+="<div class='bx "+stClass+"' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>재고</div>"+(sold?"<div class='bv' style='display:inline-block;background:#E5E5E5;color:#8A8A8A;font-weight:800;padding:2px 9px;border-radius:20px;margin-top:1px;'>품절</div>":"<div class='bv' style='color:"+sc2+";'>"+item.stock+"개</div>")+"</div>";
+        if(hasMarket){
+          h+="<div class='bx ba' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>🃏 시세</div><div class='bv'>"+krw(item.marketPrice)+"</div></div>";
+          var diff=item.price-item.marketPrice;
+          var diffColor=diff>0?"var(--er)":(diff<0?"#0F9E6E":"var(--txl)");
+          var diffTxt=diff>0?"+"+krw(diff):(diff<0?"−"+krw(Math.abs(diff)):"동일");
+          h+="<div class='bx bn' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>시세差</div><div class='bv' style='color:"+diffColor+";font-size:11px;'>"+diffTxt+"</div></div>";
+        }
         if(hasIndiv){
           h+="<div class='bx ba' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>낱개가</div><div class='bv'>"+krw(item.indivPrice)+"</div></div>";
           h+="<div class='bx ba' style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;box-sizing:border-box;'><div class='bl'>낱개재고</div><div class='bv'>"+item.indivStock+"개</div></div>";
@@ -960,6 +972,14 @@ function openAdd(){
   }
   h+="<input class='inp' id='ai-cat' placeholder='직접 입력 또는 위에서 선택'/></div>";
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상품명</label><input class='inp' id='ai-name' placeholder='예: 홀로그램 카드'/></div>";
+  if(acc==="Card"){
+    h+="<div style='background:var(--bg);border:1.5px solid var(--bd);border-radius:10px;padding:12px;'>";
+    h+="<div style='font-size:11px;color:var(--txs);font-weight:700;margin-bottom:8px;'>🃏 카드 정보</div>";
+    h+="<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px;'>";
+    h+="<div><label style='font-size:10px;color:var(--txs);display:block;margin-bottom:4px;'>카드 번호</label><input class='inp' id='ai-cardno' placeholder='예: SV-045'/></div>";
+    h+="<div><label style='font-size:10px;color:var(--txs);display:block;margin-bottom:4px;'>시세 (원)</label><input class='inp' type='number' id='ai-marketprice' placeholder='0'/></div>";
+    h+="</div></div>";
+  }
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>판매가 (원)</label>";
   h+="<input class='inp' type='number' id='ai-price' placeholder='10000' oninput='updBunge()'/>";
   h+="<div id='ai-bunge' style='display:none;margin-top:6px;background:var(--ps);border:1px solid var(--pm);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--p);font-weight:700;'></div></div>";
@@ -1006,9 +1026,13 @@ function submitAdd(acc){
   var desc=((document.getElementById("ai-desc")||{}).value||"").trim();
   var iStock=Number((document.getElementById("ai-istock")||{}).value||0);
   var iPrice=Number((document.getElementById("ai-iprice")||{}).value||0);
+  var cardNo=((document.getElementById("ai-cardno")||{}).value||"").trim();
+  var marketPrice=Number((document.getElementById("ai-marketprice")||{}).value||0);
   if(!cat||!name||!price){alert("분류, 상품명, 판매가를 입력하세요.");return;}
   var newItem={id:Date.now(),category:cat,name:name,price:price,stock:stock,soldCount:0,soldValue:0,images:_addImages.slice(0,4),desc:desc,reserving:0};
   if(iStock>0&&iPrice>0){ newItem.indivStock=iStock; newItem.indivPrice=iPrice; }
+  if(cardNo) newItem.cardNo=cardNo;
+  if(marketPrice>0) newItem.marketPrice=marketPrice;
   S.items[acc].push(newItem);
   saveS();closeModal();renderInv();
 }
@@ -1030,6 +1054,14 @@ function openEdit(acc,id){
   _editImages=(item.images||[]).slice();
   var h="<div style='display:flex;flex-direction:column;gap:12px;'>";
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>상품명</label><input class='inp' id='en' value='"+item.name+"'/></div>";
+  if(acc==="Card"){
+    h+="<div style='background:var(--bg);border:1.5px solid var(--bd);border-radius:10px;padding:12px;'>";
+    h+="<div style='font-size:11px;color:var(--txs);font-weight:700;margin-bottom:8px;'>🃏 카드 정보</div>";
+    h+="<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px;'>";
+    h+="<div><label style='font-size:10px;color:var(--txs);display:block;margin-bottom:4px;'>카드 번호</label><input class='inp' id='e-cardno' value='"+escHtml(item.cardNo||"")+"' placeholder='예: SV-045'/></div>";
+    h+="<div><label style='font-size:10px;color:var(--txs);display:block;margin-bottom:4px;'>시세 (원)</label><input class='inp' type='number' id='e-marketprice' value='"+(item.marketPrice||"")+"' placeholder='0'/></div>";
+    h+="</div></div>";
+  }
   h+="<div><label style='font-size:11px;color:var(--txs);display:block;margin-bottom:5px;font-weight:700;'>판매가 (원)</label>";
   h+="<input class='inp' type='number' id='ep' value='"+item.price+"' oninput='updEditBunge()'/>";
   h+="<div id='eb' style='margin-top:6px;background:var(--ps);border:1px solid var(--pm);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--p);font-weight:700;'>번개장터 가이드가 → "+krw(bunge(item.price))+"</div></div>";
@@ -1146,6 +1178,8 @@ function submitEdit(){
   var desc=((document.getElementById("e-desc")||{}).value||"").trim();
   var iStock=Number((document.getElementById("ei-istock")||{}).value||0);
   var iPrice=Number((document.getElementById("ei-iprice")||{}).value||0);
+  var cardNo=((document.getElementById("e-cardno")||{}).value||"").trim();
+  var marketPrice=Number((document.getElementById("e-marketprice")||{}).value||0);
   if(!name||!price){alert("상품명과 판매가를 입력하세요.");return;}
   S.items[acc]=S.items[acc].map(function(i){
     if(i.id!==id) return i;
@@ -1155,12 +1189,55 @@ function submitEdit(){
     else if(price===origPrice||!origPrice) delete newItem.origPrice;
     if(iStock>0&&iPrice>0){ newItem.indivStock=iStock; newItem.indivPrice=iPrice; }
     else { delete newItem.indivStock; delete newItem.indivPrice; }
+    if(cardNo) newItem.cardNo=cardNo; else delete newItem.cardNo;
+    if(marketPrice>0) newItem.marketPrice=marketPrice; else delete newItem.marketPrice;
     return newItem;
   });
   saveS();closeModal();renderInv();
 }
 
-// ── Bulk Add ──────────────────────────────────────
+// ── 시세 일괄 입력 (Card 전용) ──────────────────────
+function openMarketBulk(){
+  var h="<div style='display:flex;flex-direction:column;gap:12px;'>";
+  h+="<div style='font-size:12px;color:var(--txs);line-height:1.6;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;'>한 줄에 하나씩, <b>카드번호 가격</b> 형식으로 붙여넣어주세요.<br>예시:<br>hBP01-006 29800<br>hBP01-028 4980원<br>hBP01-014 980</div>";
+  h+="<textarea class='inp' id='mb-text' rows='10' style='resize:vertical;min-height:180px;line-height:1.6;font-family:monospace;font-size:12px;' placeholder='hBP01-006 29800\nhBP01-028 4980\nhBP01-014 980'></textarea>";
+  h+="<div id='mb-preview' style='font-size:12px;color:var(--txs);'></div>";
+  h+="<button type='button' class='btn bp' style='width:100%;padding:12px;font-size:14px;' onclick='submitMarketBulk()'>일괄 적용</button>";
+  h+="</div>";
+  showModal("🃏 시세 일괄 입력 — Card",h);
+}
+function parseMarketLines(text){
+  var map={};
+  text.split("\n").forEach(function(line){
+    line=line.trim();
+    if(!line) return;
+    // 카드번호: 문자+숫자+하이픈 조합, 가격: 숫자(콤마/원 허용)
+    var m=line.match(/([A-Za-z0-9\-]+)\s+[^\d]*([\d,]+)\s*원?/);
+    if(!m) return;
+    var cardNo=m[1].trim();
+    var price=Number(m[2].replace(/,/g,""));
+    if(cardNo&&price>0) map[cardNo.toLowerCase()]=price;
+  });
+  return map;
+}
+function submitMarketBulk(){
+  var acc="Card";
+  var text=(document.getElementById("mb-text")||{}).value||"";
+  var map=parseMarketLines(text);
+  var matched=0, unmatched=0;
+  S.items[acc]=(S.items[acc]||[]).map(function(i){
+    if(i.cardNo && map[i.cardNo.trim().toLowerCase()]!==undefined){
+      matched++;
+      return Object.assign({},i,{marketPrice:map[i.cardNo.trim().toLowerCase()]});
+    }
+    return i;
+  });
+  var totalParsed=Object.keys(map).length;
+  unmatched=totalParsed-matched;
+  saveS();closeModal();renderInv();
+  alert("시세 적용 완료!\n\n매칭된 상품: "+matched+"개\n입력했지만 매칭 안 된 카드번호: "+unmatched+"개\n\n※ 매칭 안 된 카드는 아직 등록 안 된 상품이거나 카드번호가 다를 수 있어요.");
+}
+
 var _bl=[];
 function openBulk(){
   var acc=S.acc;
