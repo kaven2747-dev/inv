@@ -83,8 +83,8 @@ input,select,button{font-family:inherit;}
 .gbx .gv{font-size:12px;font-weight:900;color:#fff;}
 .pc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 </style>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
 </head>
 <body>
 <div id="login-gate" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#FFF8F5,#FFEDE5);display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;">
@@ -245,11 +245,15 @@ loadS();
 // ── Cloud sync (Firebase) ──────────────────────────
 var firebaseConfig={apiKey:"AIzaSyAEHvHBxhMPkXTunTl3R4OiEF-EES9XDiQ",authDomain:"matjuil.firebaseapp.com",projectId:"matjuil",storageBucket:"matjuil.firebasestorage.app",messagingSenderId:"860640396737",appId:"1:860640396737:web:b0c593712b903478f59b40"};
 var _cloudDocRef=null, _cloudSaveTimer=null, _applyingRemote=false, _cloudFirstSnap=true, _localEditAt=0;
-try{
-  firebase.initializeApp(firebaseConfig);
-  _cloudDocRef=firebase.firestore().collection("sincerely").doc("inventory");
-  cloudSubscribe();
-}catch(e){ console.error("firebase init failed",e); }
+function initCloudSync(){
+  if(typeof firebase==="undefined"){ setTimeout(initCloudSync,300); return; } // SDK 아직 로딩중이면 잠깐 후 재시도
+  try{
+    firebase.initializeApp(firebaseConfig);
+    _cloudDocRef=firebase.firestore().collection("sincerely").doc("inventory");
+    cloudSubscribe();
+  }catch(e){ console.error("firebase init failed",e); }
+}
+setTimeout(initCloudSync,0);
 
 function cloudPush(){
   if(_applyingRemote||!_cloudDocRef) return;
