@@ -865,8 +865,10 @@ function renderInv(){
     h+="</div>";
     h+="<div style='display:flex;align-items:center;gap:8px;'>";
     // Edit button — uses data attributes, onclick stops propagation
-    h+="<button type='button' onclick='event.stopPropagation();openItemSort(\""+acc+"\",\""+escHtml(cat).replace(/'/g,"\\'")+"\")' style='background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);border-radius:8px;color:#fff;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:700;'>↕ 순서</button>";
-    h+="<button type='button' data-acc='"+acc+"' data-cat='"+cat+"' onclick='event.stopPropagation();editCat(this)' style='background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);border-radius:8px;color:#fff;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:700;'>수정</button>";
+    if(isOpen){
+      h+="<button type='button' onclick='event.stopPropagation();openItemSort(\""+acc+"\",\""+escHtml(cat).replace(/'/g,"\\'")+"\")' style='background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);border-radius:8px;color:#fff;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:700;'>↕ 순서</button>";
+      h+="<button type='button' data-acc='"+acc+"' data-cat='"+cat+"' onclick='event.stopPropagation();editCat(this)' style='background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);border-radius:8px;color:#fff;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:700;'>수정</button>";
+    }
     h+=chev;
     h+="</div>";
     h+="</div>"; // end banner div
