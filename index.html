@@ -417,6 +417,8 @@ function renderCeImgBox(){
   var h="";
   if(val){
     h+="<img src='"+val+"' style='width:48px;height:48px;object-fit:cover;border:1.5px solid var(--bd);border-radius:8px;'/>";
+    h+="<button type='button' class='btn bg' style='padding:6px 8px;font-size:11px;' onclick='rotateCeImg()'>↻</button>";
+    h+="<button type='button' class='btn bg' style='padding:6px 8px;font-size:10px;' onclick='cropCeImg()'>⬜1:1</button>";
     h+="<button type='button' class='btn bg' style='padding:6px 10px;font-size:11px;' onclick=\"document.getElementById('ce-img-file').click()\">변경</button>";
     h+="<button type='button' class='btn' style='padding:6px 10px;font-size:11px;background:var(--erb);color:var(--er);border:1.5px solid var(--erd);' onclick='removeCeImg()'>제거</button>";
   }else{
@@ -505,6 +507,14 @@ function onCatImgChange(input){
 function removeCeImg(){
   var el=document.getElementById("ce-img"); if(el) el.value="";
   renderCeImgBox();
+}
+function rotateCeImg(){
+  var el=document.getElementById("ce-img"); if(!el||!el.value) return;
+  rotateDataUrl(el.value,function(res){ el.value=res; renderCeImgBox(); });
+}
+function cropCeImg(){
+  var el=document.getElementById("ce-img"); if(!el||!el.value) return;
+  cropSquareDataUrl(el.value,function(res){ el.value=res; renderCeImgBox(); });
 }
 function pickCC(btn){
   var v=btn?btn.getAttribute("data-cv"):"";
@@ -1084,8 +1094,39 @@ function togBunge(id){
 
 // ── Add Item ──────────────────────────────────────
 var _addImages=[];
+function rotateDataUrl(dataUrl,cb){
+  var img=new Image();
+  img.onload=function(){
+    var canvas=document.createElement("canvas");
+    canvas.width=img.height; canvas.height=img.width;
+    var ctx=canvas.getContext("2d");
+    ctx.translate(canvas.width/2,canvas.height/2);
+    ctx.rotate(Math.PI/2);
+    ctx.drawImage(img,-img.width/2,-img.height/2);
+    cb(canvas.toDataURL("image/jpeg",0.85));
+  };
+  img.onerror=function(){ cb(dataUrl); };
+  img.src=dataUrl;
+}
+function cropSquareDataUrl(dataUrl,cb){
+  var img=new Image();
+  img.onload=function(){
+    var size=Math.min(img.width,img.height);
+    var sx=(img.width-size)/2, sy=(img.height-size)/2;
+    var canvas=document.createElement("canvas");
+    canvas.width=size; canvas.height=size;
+    var ctx=canvas.getContext("2d");
+    ctx.drawImage(img,sx,sy,size,size,0,0,size,size);
+    cb(canvas.toDataURL("image/jpeg",0.85));
+  };
+  img.onerror=function(){ cb(dataUrl); };
+  img.src=dataUrl;
+}
 function renderImgGrid(boxId, arr){
   var box=document.getElementById(boxId); if(!box) return;
+  var isAdd=boxId==="ai-images";
+  var rotFn=isAdd?"rotateAddImg":"rotateEditImg";
+  var cropFn=isAdd?"cropAddImg":"cropEditImg";
   var h="";
   for(var i=0;i<4;i++){
     var img=arr[i];
@@ -1093,11 +1134,15 @@ function renderImgGrid(boxId, arr){
       h+="<div style='position:relative;'>";
       h+="<img src='"+img+"' style='width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;border:1.5px solid var(--bd);display:block;'/>";
       if(i===0) h+="<span style='position:absolute;top:2px;left:2px;background:var(--p);color:#fff;font-size:8px;font-weight:800;padding:1px 5px;border-radius:6px;'>대표</span>";
-      h+="<button type='button' onclick='"+(boxId==="ai-images"?"removeAddImg":"removeEditImg")+"("+i+")' style='position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;'>✕</button>";
+      h+="<button type='button' onclick='"+(isAdd?"removeAddImg":"removeEditImg")+"("+i+")' style='position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;'>✕</button>";
+      h+="<div style='position:absolute;bottom:2px;left:2px;right:2px;display:flex;gap:3px;'>";
+      h+="<button type='button' onclick='"+rotFn+"("+i+")' title='90도 회전' style='flex:1;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:5px;font-size:11px;padding:3px 0;cursor:pointer;line-height:1;'>↻</button>";
+      h+="<button type='button' onclick='"+cropFn+"("+i+")' title='1:1 자르기' style='flex:1;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:5px;font-size:9px;padding:3px 0;cursor:pointer;line-height:1;'>⬜1:1</button>";
+      h+="</div>";
       h+="</div>";
     }else{
       h+="<label style='aspect-ratio:1/1;border:1.5px dashed var(--bd);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--txl);font-size:22px;cursor:pointer;background:var(--bg);'>+";
-      h+="<input type='file' accept='image/*' style='display:none;' onchange='"+(boxId==="ai-images"?"onAddImgChange":"onEditImgChange")+"("+i+",this)'/>";
+      h+="<input type='file' accept='image/*' style='display:none;' onchange='"+(isAdd?"onAddImgChange":"onEditImgChange")+"("+i+",this)'/>";
       h+="</label>";
     }
   }
@@ -1109,6 +1154,8 @@ function onAddImgChange(i,input){
   compressImage(f,900,0.7,function(dataUrl){ _addImages[i]=dataUrl; renderAddImages(); });
 }
 function removeAddImg(i){ _addImages.splice(i,1); renderAddImages(); }
+function rotateAddImg(i){ rotateDataUrl(_addImages[i],function(res){ _addImages[i]=res; renderAddImages(); }); }
+function cropAddImg(i){ cropSquareDataUrl(_addImages[i],function(res){ _addImages[i]=res; renderAddImages(); }); }
 
 function openAdd(){
   var acc=S.acc;
@@ -1199,6 +1246,8 @@ function onEditImgChange(i,input){
   compressImage(f,900,0.7,function(dataUrl){ _editImages[i]=dataUrl; renderEditImages(); });
 }
 function removeEditImg(i){ _editImages.splice(i,1); renderEditImages(); }
+function rotateEditImg(i){ rotateDataUrl(_editImages[i],function(res){ _editImages[i]=res; renderEditImages(); }); }
+function cropEditImg(i){ cropSquareDataUrl(_editImages[i],function(res){ _editImages[i]=res; renderEditImages(); }); }
 
 function openEdit(acc,id){
   var item=(S.items[acc]||[]).find(function(i){return i.id===id;});
