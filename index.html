@@ -875,11 +875,6 @@ function renderInv(){
     if(isOpen){
       var borderCol=bg.indexOf("#")>=0?bg.split("#")[1].split(/[,)]/)[0]:"FF6E41";
     h+="<div style='background:var(--card);border:2px solid #"+borderCol+";border-top:none;border-radius:0 0 14px 14px;overflow:hidden;margin-bottom:12px;'>";
-      h+="<div style='display:flex;gap:6px;padding:10px 10px 0 10px;'>";
-      h+="<button type='button' onclick='openItemSort(\""+acc+"\",\""+escHtml(cat).replace(/'/g,"\\'")+"\")' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>↕ 순서</button>";
-      h+="<button type='button' data-acc='"+acc+"' data-cat='"+cat+"' onclick='editCat(this)' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>수정</button>";
-      h+="<button type='button' onclick='togCat(\""+ck+"\")' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>▲ 접기</button>";
-      h+="</div>";
       var _catSets=(S.sets[acc]||[]).filter(function(s){
         return s.itemIds.length>1 && s.itemIds.every(function(id){return ci.some(function(i){return i.id===id;});});
       });
@@ -1021,6 +1016,11 @@ function renderInv(){
           }
         }
       });
+      h+="<div style='display:flex;gap:6px;padding:10px;'>";
+      h+="<button type='button' onclick='openItemSort(\""+acc+"\",\""+escHtml(cat).replace(/'/g,"\\'")+"\")' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>↕ 순서</button>";
+      h+="<button type='button' data-acc='"+acc+"' data-cat='"+cat+"' onclick='editCat(this)' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>수정</button>";
+      h+="<button type='button' onclick='togCat(\""+ck+"\")' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>▲ 접기</button>";
+      h+="</div>";
       h+="</div>"; // end cat-body
     }
     h+="</div>"; // end cat wrapper
