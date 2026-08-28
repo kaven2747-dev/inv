@@ -83,8 +83,8 @@ input,select,button{font-family:inherit;}
 .gbx .gv{font-size:12px;font-weight:900;color:#fff;}
 .pc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 </style>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div id="login-gate" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#FFF8F5,#FFEDE5);display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;">
@@ -234,7 +234,9 @@ function loadS(){
 }
 function saveS(){
   _localEditAt=Date.now();
-  try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,itemOrder:S.itemOrder})); }catch(e){}
+  try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,itemOrder:S.itemOrder}));
+    localStorage.setItem("inv_v3_ts",String(_localEditAt));
+  }catch(e){}
   cloudPush();
 }
 function escHtml(s){
@@ -244,35 +246,39 @@ loadS();
 
 // ── Cloud sync (Firebase) ──────────────────────────
 var firebaseConfig={apiKey:"AIzaSyAEHvHBxhMPkXTunTl3R4OiEF-EES9XDiQ",authDomain:"matjuil.firebaseapp.com",projectId:"matjuil",storageBucket:"matjuil.firebasestorage.app",messagingSenderId:"860640396737",appId:"1:860640396737:web:b0c593712b903478f59b40"};
-var _cloudDocRef=null, _cloudSaveTimer=null, _applyingRemote=false, _cloudFirstSnap=true, _localEditAt=0;
-function initCloudSync(){
-  if(typeof firebase==="undefined"){ setTimeout(initCloudSync,300); return; } // SDK 아직 로딩중이면 잠깐 후 재시도
-  try{
-    firebase.initializeApp(firebaseConfig);
-    _cloudDocRef=firebase.firestore().collection("sincerely").doc("inventory");
-    cloudSubscribe();
-  }catch(e){ console.error("firebase init failed",e); }
-}
-setTimeout(initCloudSync,0);
+var _cloudDocRef=null, _cloudSaveTimer=null, _applyingRemote=false, _cloudFirstSnap=true;
+var _localEditAt=(function(){ try{ return Number(localStorage.getItem("inv_v3_ts")||0); }catch(e){ return 0; } })();
+try{
+  firebase.initializeApp(firebaseConfig);
+  _cloudDocRef=firebase.firestore().collection("sincerely").doc("inventory");
+  cloudSubscribe();
+}catch(e){ console.error("firebase init failed",e); }
+// 탭을 닫거나 화면을 벗어날 때 대기 중인 클라우드 저장을 즉시 실행 (지연 때문에 최신 변경이 씹히는 것 방지)
+document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="hidden") cloudPushNow(); });
+window.addEventListener("pagehide",cloudPushNow);
+window.addEventListener("beforeunload",cloudPushNow);
 
 function cloudPush(){
   if(_applyingRemote||!_cloudDocRef) return;
   if(_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
+  _cloudSaveTimer=setTimeout(cloudPushNow,400);
+}
+function cloudPushNow(){
+  if(_cloudSaveTimer){ clearTimeout(_cloudSaveTimer); _cloudSaveTimer=null; }
+  if(_applyingRemote||!_cloudDocRef) return;
   var myEditAt=_localEditAt;
-  _cloudSaveTimer=setTimeout(function(){
-    // 용량 절약: 재고 "수량"만 동기화 (이름/가격/사진/주문 등은 내보내기·가져오기로 관리)
-    var stocks={};
-    ACCS.forEach(function(a){
-      stocks[a]={};
-      (S.items[a]||[]).forEach(function(i){
-        var rec={s:i.stock||0};
-        if(i.indivStock>0) rec.is=i.indivStock;
-        stocks[a][i.id]=rec;
-      });
+  // 용량 절약: 재고 "수량"만 동기화 (이름/가격/사진/주문 등은 내보내기·가져오기로 관리)
+  var stocks={};
+  ACCS.forEach(function(a){
+    stocks[a]={};
+    (S.items[a]||[]).forEach(function(i){
+      var rec={s:i.stock||0};
+      if(i.indivStock>0) rec.is=i.indivStock;
+      stocks[a][i.id]=rec;
     });
-    var payload={stocks:stocks,updatedAt:myEditAt};
-    _cloudDocRef.set(payload).catch(function(err){ showCloudMsg("⚠ 클라우드 저장 실패: "+(err&&err.message||"오류")+" (로컬 저장은 정상)",true); });
-  },600);
+  });
+  var payload={stocks:stocks,updatedAt:myEditAt};
+  _cloudDocRef.set(payload).catch(function(err){ showCloudMsg("⚠ 클라우드 저장 실패: "+(err&&err.message||"오류")+" (로컬 저장은 정상)",true); });
 }
 function cloudSubscribe(){
   _cloudDocRef.onSnapshot(function(snap){
@@ -417,8 +423,6 @@ function renderCeImgBox(){
   var h="";
   if(val){
     h+="<img src='"+val+"' style='width:48px;height:48px;object-fit:cover;border:1.5px solid var(--bd);border-radius:8px;'/>";
-    h+="<button type='button' class='btn bg' style='padding:6px 8px;font-size:11px;' onclick='rotateCeImg()'>↻</button>";
-    h+="<button type='button' class='btn bg' style='padding:6px 8px;font-size:10px;' onclick='cropCeImg()'>⬜1:1</button>";
     h+="<button type='button' class='btn bg' style='padding:6px 10px;font-size:11px;' onclick=\"document.getElementById('ce-img-file').click()\">변경</button>";
     h+="<button type='button' class='btn' style='padding:6px 10px;font-size:11px;background:var(--erb);color:var(--er);border:1.5px solid var(--erd);' onclick='removeCeImg()'>제거</button>";
   }else{
@@ -507,14 +511,6 @@ function onCatImgChange(input){
 function removeCeImg(){
   var el=document.getElementById("ce-img"); if(el) el.value="";
   renderCeImgBox();
-}
-function rotateCeImg(){
-  var el=document.getElementById("ce-img"); if(!el||!el.value) return;
-  rotateDataUrl(el.value,function(res){ el.value=res; renderCeImgBox(); });
-}
-function cropCeImg(){
-  var el=document.getElementById("ce-img"); if(!el||!el.value) return;
-  cropSquareDataUrl(el.value,function(res){ el.value=res; renderCeImgBox(); });
 }
 function pickCC(btn){
   var v=btn?btn.getAttribute("data-cv"):"";
@@ -885,6 +881,11 @@ function renderInv(){
     if(isOpen){
       var borderCol=bg.indexOf("#")>=0?bg.split("#")[1].split(/[,)]/)[0]:"FF6E41";
     h+="<div style='background:var(--card);border:2px solid #"+borderCol+";border-top:none;border-radius:0 0 14px 14px;overflow:hidden;margin-bottom:12px;'>";
+      h+="<div style='display:flex;gap:6px;padding:10px 10px 0 10px;'>";
+      h+="<button type='button' onclick='openItemSort(\""+acc+"\",\""+escHtml(cat).replace(/'/g,"\\'")+"\")' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>↕ 순서</button>";
+      h+="<button type='button' data-acc='"+acc+"' data-cat='"+cat+"' onclick='editCat(this)' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>수정</button>";
+      h+="<button type='button' onclick='togCat(\""+ck+"\")' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>▲ 접기</button>";
+      h+="</div>";
       var _catSets=(S.sets[acc]||[]).filter(function(s){
         return s.itemIds.length>1 && s.itemIds.every(function(id){return ci.some(function(i){return i.id===id;});});
       });
@@ -1026,11 +1027,6 @@ function renderInv(){
           }
         }
       });
-      h+="<div style='display:flex;gap:6px;padding:10px;'>";
-      h+="<button type='button' onclick='openItemSort(\""+acc+"\",\""+escHtml(cat).replace(/'/g,"\\'")+"\")' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>↕ 순서</button>";
-      h+="<button type='button' data-acc='"+acc+"' data-cat='"+cat+"' onclick='editCat(this)' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>수정</button>";
-      h+="<button type='button' onclick='togCat(\""+ck+"\")' style='flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer;padding:8px 0;font-size:12px;font-weight:700;'>▲ 접기</button>";
-      h+="</div>";
       h+="</div>"; // end cat-body
     }
     h+="</div>"; // end cat wrapper
@@ -1094,39 +1090,8 @@ function togBunge(id){
 
 // ── Add Item ──────────────────────────────────────
 var _addImages=[];
-function rotateDataUrl(dataUrl,cb){
-  var img=new Image();
-  img.onload=function(){
-    var canvas=document.createElement("canvas");
-    canvas.width=img.height; canvas.height=img.width;
-    var ctx=canvas.getContext("2d");
-    ctx.translate(canvas.width/2,canvas.height/2);
-    ctx.rotate(Math.PI/2);
-    ctx.drawImage(img,-img.width/2,-img.height/2);
-    cb(canvas.toDataURL("image/jpeg",0.85));
-  };
-  img.onerror=function(){ cb(dataUrl); };
-  img.src=dataUrl;
-}
-function cropSquareDataUrl(dataUrl,cb){
-  var img=new Image();
-  img.onload=function(){
-    var size=Math.min(img.width,img.height);
-    var sx=(img.width-size)/2, sy=(img.height-size)/2;
-    var canvas=document.createElement("canvas");
-    canvas.width=size; canvas.height=size;
-    var ctx=canvas.getContext("2d");
-    ctx.drawImage(img,sx,sy,size,size,0,0,size,size);
-    cb(canvas.toDataURL("image/jpeg",0.85));
-  };
-  img.onerror=function(){ cb(dataUrl); };
-  img.src=dataUrl;
-}
 function renderImgGrid(boxId, arr){
   var box=document.getElementById(boxId); if(!box) return;
-  var isAdd=boxId==="ai-images";
-  var rotFn=isAdd?"rotateAddImg":"rotateEditImg";
-  var cropFn=isAdd?"cropAddImg":"cropEditImg";
   var h="";
   for(var i=0;i<4;i++){
     var img=arr[i];
@@ -1134,15 +1099,11 @@ function renderImgGrid(boxId, arr){
       h+="<div style='position:relative;'>";
       h+="<img src='"+img+"' style='width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;border:1.5px solid var(--bd);display:block;'/>";
       if(i===0) h+="<span style='position:absolute;top:2px;left:2px;background:var(--p);color:#fff;font-size:8px;font-weight:800;padding:1px 5px;border-radius:6px;'>대표</span>";
-      h+="<button type='button' onclick='"+(isAdd?"removeAddImg":"removeEditImg")+"("+i+")' style='position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;'>✕</button>";
-      h+="<div style='position:absolute;bottom:2px;left:2px;right:2px;display:flex;gap:3px;'>";
-      h+="<button type='button' onclick='"+rotFn+"("+i+")' title='90도 회전' style='flex:1;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:5px;font-size:11px;padding:3px 0;cursor:pointer;line-height:1;'>↻</button>";
-      h+="<button type='button' onclick='"+cropFn+"("+i+")' title='1:1 자르기' style='flex:1;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:5px;font-size:9px;padding:3px 0;cursor:pointer;line-height:1;'>⬜1:1</button>";
-      h+="</div>";
+      h+="<button type='button' onclick='"+(boxId==="ai-images"?"removeAddImg":"removeEditImg")+"("+i+")' style='position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;'>✕</button>";
       h+="</div>";
     }else{
       h+="<label style='aspect-ratio:1/1;border:1.5px dashed var(--bd);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--txl);font-size:22px;cursor:pointer;background:var(--bg);'>+";
-      h+="<input type='file' accept='image/*' style='display:none;' onchange='"+(isAdd?"onAddImgChange":"onEditImgChange")+"("+i+",this)'/>";
+      h+="<input type='file' accept='image/*' style='display:none;' onchange='"+(boxId==="ai-images"?"onAddImgChange":"onEditImgChange")+"("+i+",this)'/>";
       h+="</label>";
     }
   }
@@ -1154,8 +1115,6 @@ function onAddImgChange(i,input){
   compressImage(f,900,0.7,function(dataUrl){ _addImages[i]=dataUrl; renderAddImages(); });
 }
 function removeAddImg(i){ _addImages.splice(i,1); renderAddImages(); }
-function rotateAddImg(i){ rotateDataUrl(_addImages[i],function(res){ _addImages[i]=res; renderAddImages(); }); }
-function cropAddImg(i){ cropSquareDataUrl(_addImages[i],function(res){ _addImages[i]=res; renderAddImages(); }); }
 
 function openAdd(){
   var acc=S.acc;
@@ -1246,8 +1205,6 @@ function onEditImgChange(i,input){
   compressImage(f,900,0.7,function(dataUrl){ _editImages[i]=dataUrl; renderEditImages(); });
 }
 function removeEditImg(i){ _editImages.splice(i,1); renderEditImages(); }
-function rotateEditImg(i){ rotateDataUrl(_editImages[i],function(res){ _editImages[i]=res; renderEditImages(); }); }
-function cropEditImg(i){ cropSquareDataUrl(_editImages[i],function(res){ _editImages[i]=res; renderEditImages(); }); }
 
 function openEdit(acc,id){
   var item=(S.items[acc]||[]).find(function(i){return i.id===id;});
