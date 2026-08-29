@@ -291,9 +291,22 @@ function cloudSubscribe(){
     if(!d.stocks){ _cloudFirstSnap=false; return; }
     _applyingRemote=true;
     var changed=false;
+
+    // 디스크(localStorage)에 실제로 저장된 최신 상품 목록을 기준으로 재고만 patch.
+    // (이 탭의 메모리 상태(S.items)가 오래된 경우, 그걸로 통째로 덮어쓰면
+    //  다른 탭/새로고침에서 방금 가져오기한 상품 목록이 사라지는 문제가 생기므로
+    //  절대 in-memory 전체를 localStorage에 그대로 쓰지 않는다.)
+    var disk=null;
+    try{
+      var raw=localStorage.getItem("inv_v3");
+      disk=raw?JSON.parse(raw):null;
+    }catch(e){ disk=null; }
+
     ACCS.forEach(function(a){
       var accStocks=d.stocks[a];
       if(!accStocks) return;
+
+      // 1) 화면 표시용 메모리 상태 갱신
       S.items[a]=(S.items[a]||[]).map(function(i){
         var rec=accStocks[i.id];
         if(!rec) return i;
@@ -304,9 +317,28 @@ function cloudSubscribe(){
         if(nis>0) ni.indivStock=nis; else delete ni.indivStock;
         return ni;
       });
+
+      // 2) 디스크 상태는 "디스크에 있던 상품 목록"에만 재고 patch (구조는 절대 안 건드림)
+      if(disk && Array.isArray(disk.items && disk.items[a])){
+        disk.items[a]=disk.items[a].map(function(i){
+          var rec=accStocks[i.id];
+          if(!rec) return i;
+          var ns=Number(rec.s||0), nis=Number(rec.is||0);
+          var ni=Object.assign({},i,{stock:ns});
+          if(nis>0) ni.indivStock=nis; else delete ni.indivStock;
+          return ni;
+        });
+      }
     });
+
     if(changed){
-      try{ localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,itemOrder:S.itemOrder})); }catch(e){}
+      try{
+        if(disk){
+          localStorage.setItem("inv_v3",JSON.stringify(disk));
+        } else {
+          localStorage.setItem("inv_v3",JSON.stringify({items:S.items,orders:S.orders,catColors:S.catColors,catImages:S.catImages,daily:S.daily,totals:S.totals,catOrder:S.catOrder,sets:S.sets,itemOrder:S.itemOrder}));
+        }
+      }catch(e){}
       if(!_cloudFirstSnap) showCloudMsg("✅ 다른 기기의 재고 변경을 불러왔어요",false);
       renderCurrent();
     }
