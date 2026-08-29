@@ -2101,7 +2101,30 @@ updateBadge();
 <script>
 // ── PWA install prompt (uses external manifest.json / sw.js) ──
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js").catch(function(){});
+  navigator.serviceWorker.register("./sw.js").then(function(reg){
+    // 새 버전이 설치 대기 중이면 즉시 활성화 요청 후 새로고침
+    reg.addEventListener("updatefound", function(){
+      var nw = reg.installing;
+      if(!nw) return;
+      nw.addEventListener("statechange", function(){
+        if(nw.state==="installed" && navigator.serviceWorker.controller){
+          nw.postMessage("SKIP_WAITING");
+        }
+      });
+    });
+    // 화면을 다시 볼 때마다 최신 버전 있는지 확인
+    document.addEventListener("visibilitychange", function(){
+      if(document.visibilityState==="visible") reg.update().catch(function(){});
+    });
+    reg.update().catch(function(){});
+  }).catch(function(){});
+  // 새 서비스워커가 컨트롤을 넘겨받으면 화면을 한 번 새로고침해서 최신 코드 적용
+  var _swRefreshed=false;
+  navigator.serviceWorker.addEventListener("controllerchange", function(){
+    if(_swRefreshed) return;
+    _swRefreshed=true;
+    window.location.reload();
+  });
 }
 </script>
 </body>
