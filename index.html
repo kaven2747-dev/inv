@@ -242,6 +242,26 @@ function saveS(){
 function escHtml(s){
   return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
+// ── 1회성 강제 데이터 심기: 계속 초기화되는 문제 때문에 백업본을 서버에서 직접 받아와서
+//    localStorage에 강제로 써넣는다. 한 번 적용되면 다시는 실행되지 않음(플래그로 방지).
+(function(){
+  try{
+    if(localStorage.getItem("inv_v3_seed_v1")==="done") return;
+    var xhr=new XMLHttpRequest();
+    xhr.open("GET","./seed.json",false); // 동기 요청(최초 1회만 실행되므로 허용)
+    xhr.send(null);
+    if(xhr.status===200 && xhr.responseText){
+      var d=JSON.parse(xhr.responseText);
+      localStorage.setItem("inv_v3", JSON.stringify({
+        items:d.items||{}, orders:d.orders||[], catColors:d.catColors||{},
+        catImages:d.catImages||{}, daily:d.daily||{}, totals:d.totals||{},
+        catOrder:d.catOrder||{}, sets:d.sets||{}, itemOrder:d.itemOrder||{}
+      }));
+      localStorage.setItem("inv_v3_ts","0"); // 이후 클라우드 재고 동기화가 정상적으로 이어붙을 수 있도록 기준시각 초기화
+    }
+  }catch(e){ console.error("seed load failed",e); }
+  try{ localStorage.setItem("inv_v3_seed_v1","done"); }catch(e){}
+})();
 loadS();
 
 // ── Cloud sync (Firebase) ──────────────────────────
