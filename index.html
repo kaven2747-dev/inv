@@ -249,9 +249,12 @@ var firebaseConfig={apiKey:"AIzaSyAEHvHBxhMPkXTunTl3R4OiEF-EES9XDiQ",authDomain:
 var _cloudDocRef=null, _cloudSaveTimer=null, _applyingRemote=false, _cloudFirstSnap=true;
 var _localEditAt=(function(){ try{ return Number(localStorage.getItem("inv_v3_ts")||0); }catch(e){ return 0; } })();
 try{
-  firebase.initializeApp(firebaseConfig);
-  _cloudDocRef=firebase.firestore().collection("sincerely").doc("inventory");
-  cloudSubscribe();
+  var CLOUD_SYNC_ENABLED=false; // ⚠️ 테스트를 위해 클라우드 재고 동기화 임시 비활성화
+  if(CLOUD_SYNC_ENABLED){
+    firebase.initializeApp(firebaseConfig);
+    _cloudDocRef=firebase.firestore().collection("sincerely").doc("inventory");
+    cloudSubscribe();
+  }
 }catch(e){ console.error("firebase init failed",e); }
 // 탭을 닫거나 화면을 벗어날 때 대기 중인 클라우드 저장을 즉시 실행 (지연 때문에 최신 변경이 씹히는 것 방지)
 document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="hidden") cloudPushNow(); });
